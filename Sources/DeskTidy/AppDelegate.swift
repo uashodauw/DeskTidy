@@ -8,7 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let runningApps = RunningAppsModel()
     private let frontmostApp = FrontmostAppModel()
     private let scenes = SceneModel()
-    private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp)
+    private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()

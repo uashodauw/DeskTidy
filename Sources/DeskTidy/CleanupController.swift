@@ -6,10 +6,12 @@ final class CleanupController: ObservableObject {
 
     private let runningApps: RunningAppsModel
     private let frontmostApp: FrontmostAppModel
+    private let scenes: SceneModel
 
-    init(runningApps: RunningAppsModel, frontmostApp: FrontmostAppModel) {
+    init(runningApps: RunningAppsModel, frontmostApp: FrontmostAppModel, scenes: SceneModel) {
         self.runningApps = runningApps
         self.frontmostApp = frontmostApp
+        self.scenes = scenes
     }
 
     var canRestore: Bool { !record.isEmpty }
@@ -17,7 +19,11 @@ final class CleanupController: ObservableObject {
     /// 只隐藏，不关闭：应用和它没保存的内容都还在，点 Dock 图标就能叫回来。
     func clean() {
         runningApps.refresh()
-        let targets = CleanupPlanner.appsToHide(running: runningApps.apps, current: frontmostApp.current)
+        let targets = CleanupPlanner.appsToHide(
+            running: runningApps.apps,
+            current: frontmostApp.current,
+            keptBundleIDs: scenes.selectedScene.keptBundleIDs
+        )
         for app in targets {
             NSRunningApplication(processIdentifier: app.processID)?.hide()
         }

@@ -10,6 +10,10 @@ final class SceneModel: ObservableObject {
         didSet { store.select(sceneID: selectedID) }
     }
 
+    var selectedScene: WorkScene {
+        scenes.first { $0.id == selectedID } ?? store.selectedScene
+    }
+
     init() {
         selectedID = store.selectedScene.id
     }
