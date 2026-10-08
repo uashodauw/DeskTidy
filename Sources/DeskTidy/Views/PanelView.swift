@@ -6,6 +6,7 @@ struct PanelView: View {
     @ObservedObject var runningApps: RunningAppsModel
     @ObservedObject var frontmostApp: FrontmostAppModel
     @ObservedObject var cleanup: CleanupController
+    @ObservedObject var scenes: SceneModel
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
@@ -25,6 +26,8 @@ struct PanelView: View {
             }
 
             currentAppRow
+
+            scenePicker
 
             Button(action: onClean) {
                 Label("一键清理", systemImage: "wand.and.stars")
@@ -76,6 +79,21 @@ struct PanelView: View {
             }
         }
         .font(.callout)
+    }
+
+    private var scenePicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("场景")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("场景", selection: $scenes.selectedID) {
+                ForEach(scenes.scenes) { scene in
+                    Text(scene.name).tag(scene.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
     }
 
     @ViewBuilder

@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private let runningApps = RunningAppsModel()
     private let frontmostApp = FrontmostAppModel()
+    private let scenes = SceneModel()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -15,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             runningApps: runningApps,
             frontmostApp: frontmostApp,
             cleanup: cleanup,
+            scenes: scenes,
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) }
