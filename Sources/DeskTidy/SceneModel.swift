@@ -10,6 +10,8 @@ final class SceneModel: ObservableObject {
         didSet { store.select(sceneID: selectedID) }
     }
 
+    var recoveredFromCorruptData: Bool { store.recoveredFromCorruptData }
+
     var selectedScene: WorkScene {
         scenes.first { $0.id == selectedID } ?? store.selectedScene
     }

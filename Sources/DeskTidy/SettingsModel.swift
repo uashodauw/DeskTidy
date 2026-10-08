@@ -13,6 +13,8 @@ final class SettingsModel: ObservableObject {
         didSet { settings.idleThreshold = idleThreshold }
     }
 
+    var recoveredFromCorruptData: Bool { settings.recoveredFromCorruptData }
+
     init() {
         soundEnabled = settings.soundEnabled
         idleThreshold = settings.idleThreshold

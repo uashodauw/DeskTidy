@@ -50,6 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里写着「清理」的图标。")
+
+        if scenes.recoveredFromCorruptData || settings.recoveredFromCorruptData {
+            // 等菜单栏图标先出来，再弹提示
+            DispatchQueue.main.async { [weak self] in self?.showRecoveredNotice() }
+        }
+    }
+
+    private func showRecoveredNotice() {
+        let alert = NSAlert()
+        alert.messageText = "设置已恢复为默认"
+        alert.informativeText = "保存的场景或设置读不出来了，\(AppInfo.displayName) 已经换回默认设置。你的应用和文件都没有受影响。"
+        alert.addButton(withTitle: "好的")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func performClean() {

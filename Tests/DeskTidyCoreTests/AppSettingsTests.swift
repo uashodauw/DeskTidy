@@ -43,6 +43,23 @@ final class AppSettingsTests: XCTestCase {
 
     func testUnknownSavedIdleThresholdFallsBackToDefault() {
         defaults.set(12345, forKey: AppSettings.idleThresholdKey)
-        XCTAssertEqual(AppSettings(defaults: defaults).idleThreshold, .oneHour)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.idleThreshold, .oneHour)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+    }
+
+    func testNormalSettingsAreNotReportedAsRecovered() {
+        let settings = AppSettings(defaults: defaults)
+        settings.soundEnabled = false
+        settings.idleThreshold = .twoHours
+        XCTAssertFalse(AppSettings(defaults: defaults).recoveredFromCorruptData)
+    }
+
+    func testTextInsteadOfSoundSettingFallsBackToDefault() {
+        defaults.set("乱码乱码", forKey: AppSettings.soundEnabledKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertTrue(settings.soundEnabled)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+        XCTAssertFalse(AppSettings(defaults: defaults).recoveredFromCorruptData)
     }
 }

@@ -88,6 +88,59 @@ final class SceneStoreTests: XCTestCase {
 
     func testUnreadableSavedScenesFallBackToDefaults() {
         defaults.set(Data("not json".utf8), forKey: SceneStore.scenesKey)
-        XCTAssertEqual(SceneStore(defaults: defaults).scenes, DefaultScenes.all)
+        let store = SceneStore(defaults: defaults)
+        XCTAssertEqual(store.scenes, DefaultScenes.all)
+        XCTAssertTrue(store.recoveredFromCorruptData)
+    }
+
+    func testFreshInstallIsNotReportedAsRecovered() {
+        XCTAssertFalse(SceneStore(defaults: defaults).recoveredFromCorruptData)
+    }
+
+    func testTextInsteadOfScenesIsRecovered() {
+        defaults.set("乱码乱码", forKey: SceneStore.scenesKey)
+        let store = SceneStore(defaults: defaults)
+        XCTAssertEqual(store.scenes, DefaultScenes.all)
+        XCTAssertTrue(store.recoveredFromCorruptData)
+    }
+
+    func testRecoveryIsReportedOnlyOnce() {
+        defaults.set("乱码乱码", forKey: SceneStore.scenesKey)
+        _ = SceneStore(defaults: defaults)
+        XCTAssertFalse(SceneStore(defaults: defaults).recoveredFromCorruptData)
+    }
+
+    func testRecoveryResetsSelectedScene() {
+        defaults.set("meeting", forKey: SceneStore.selectedSceneKey)
+        defaults.set("乱码乱码", forKey: SceneStore.scenesKey)
+        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.id, "ai-work")
+    }
+
+    func testSavedScenesCarryAVersion() throws {
+        SceneStore(defaults: defaults).setApp(calculator, kept: true, inSceneID: "ai-work")
+        let data = try XCTUnwrap(defaults.data(forKey: SceneStore.scenesKey))
+        let saved = try JSONDecoder().decode(SceneStore.SavedScenes.self, from: data)
+        XCTAssertEqual(saved.version, SceneStore.currentVersion)
+    }
+
+    func testScenesSavedBeforeVersioningAreKeptAndUpgraded() throws {
+        var edited = DefaultScenes.all
+        edited[0].keptBundleIDs.append(calculator)
+        defaults.set(try JSONEncoder().encode(edited), forKey: SceneStore.scenesKey)
+
+        let store = SceneStore(defaults: defaults)
+        XCTAssertEqual(store.scenes, edited)
+        XCTAssertFalse(store.recoveredFromCorruptData)
+
+        let data = try XCTUnwrap(defaults.data(forKey: SceneStore.scenesKey))
+        let saved = try JSONDecoder().decode(SceneStore.SavedScenes.self, from: data)
+        XCTAssertEqual(saved.version, SceneStore.currentVersion)
+        XCTAssertEqual(saved.scenes, edited)
+    }
+
+    func testScenesFromAnUnknownNewerVersionFallBackToDefaults() throws {
+        let future = SceneStore.SavedScenes(version: SceneStore.currentVersion + 1, scenes: DefaultScenes.all)
+        defaults.set(try JSONEncoder().encode(future), forKey: SceneStore.scenesKey)
+        XCTAssertTrue(SceneStore(defaults: defaults).recoveredFromCorruptData)
     }
 }

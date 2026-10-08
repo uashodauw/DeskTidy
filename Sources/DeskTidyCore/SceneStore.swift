@@ -4,14 +4,42 @@ import Foundation
 public final class SceneStore {
     static let selectedSceneKey = "selectedSceneID"
     static let scenesKey = "scenes"
+    /// 以后改了场景的保存格式，就把这个数字加 1，并在 load 里处理旧格式，否则老用户的场景会被当成坏数据清掉。
+    static let currentVersion = 1
+
+    struct SavedScenes: Codable {
+        let version: Int
+        let scenes: [WorkScene]
+    }
+
+    private enum LoadResult {
+        case missing
+        case loaded([WorkScene], needsUpgrade: Bool)
+        case unreadable
+    }
 
     public private(set) var scenes: [WorkScene]
+    /// 存的场景读不出来、已经换回默认场景时为 true，用来提示用户一次。
+    public private(set) var recoveredFromCorruptData = false
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults = .standard, defaultScenes: [WorkScene] = DefaultScenes.all) {
         precondition(!defaultScenes.isEmpty, "至少要有一个场景")
         self.defaults = defaults
-        scenes = Self.loadScenes(from: defaults) ?? defaultScenes
+        switch Self.load(from: defaults) {
+        case .missing:
+            scenes = defaultScenes
+        case let .loaded(saved, needsUpgrade):
+            scenes = saved
+            if needsUpgrade {
+                save()
+            }
+        case .unreadable:
+            scenes = defaultScenes
+            recoveredFromCorruptData = true
+            defaults.removeObject(forKey: Self.selectedSceneKey)
+            save()
+        }
     }
 
     /// 没选过、或者存的场景已经不存在时，用第一个场景。
@@ -38,16 +66,24 @@ public final class SceneStore {
     }
 
     private func save() {
-        if let data = try? JSONEncoder().encode(scenes) {
+        let saved = SavedScenes(version: Self.currentVersion, scenes: scenes)
+        if let data = try? JSONEncoder().encode(saved) {
             defaults.set(data, forKey: Self.scenesKey)
         }
     }
 
-    private static func loadScenes(from defaults: UserDefaults) -> [WorkScene]? {
-        guard let data = defaults.data(forKey: scenesKey),
-              let scenes = try? JSONDecoder().decode([WorkScene].self, from: data),
-              !scenes.isEmpty
-        else { return nil }
-        return scenes
+    private static func load(from defaults: UserDefaults) -> LoadResult {
+        guard defaults.object(forKey: scenesKey) != nil else { return .missing }
+        guard let data = defaults.data(forKey: scenesKey) else { return .unreadable }
+        let decoder = JSONDecoder()
+        if let saved = try? decoder.decode(SavedScenes.self, from: data) {
+            guard saved.version == currentVersion, !saved.scenes.isEmpty else { return .unreadable }
+            return .loaded(saved.scenes, needsUpgrade: false)
+        }
+        // 版本 0：加版本号之前直接存的场景数组
+        if let legacy = try? decoder.decode([WorkScene].self, from: data), !legacy.isEmpty {
+            return .loaded(legacy, needsUpgrade: true)
+        }
+        return .unreadable
     }
 }
