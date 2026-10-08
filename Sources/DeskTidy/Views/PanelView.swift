@@ -9,6 +9,7 @@ struct PanelView: View {
     @ObservedObject var cleanup: CleanupController
     @ObservedObject var scenes: SceneModel
     @ObservedObject var settings: SettingsModel
+    let usage: UsageModel
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
@@ -162,14 +163,22 @@ struct PanelView: View {
         )
     }
 
+    private func lastUsedText(for app: RunningApp) -> String? {
+        if app.bundleID == frontmostApp.current?.bundleID {
+            return "正在用"
+        }
+        return usage.lastUsed(app).map { RelativeTime.describe($0) }
+    }
+
     private var runningAppsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("正在运行（\(runningApps.apps.count)）")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("打勾 = 在「\(scenes.selectedScene.name)」场景中保留")
+            Text("打勾 = 在「\(scenes.selectedScene.name)」场景中保留；右边是上次使用时间")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
 
             if runningApps.apps.isEmpty {
                 Text("没有其他正在运行的应用")
@@ -188,8 +197,16 @@ struct PanelView: View {
                                 Text(app.name)
                                     .lineLimit(1)
                                 Spacer()
+                                if let lastUsed = lastUsedText(for: app) {
+                                    Text(lastUsed)
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .help("上次使用时间")
+                                }
                             }
                             .frame(height: rowHeight)
+                            // 给右边浮出来的滚动条留位置
+                            .padding(.trailing, 14)
                         }
                     }
                 }

@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let scenes = SceneModel()
     private let toast = ToastPresenter()
     private let settings = SettingsModel()
+    private let usage = UsageModel()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -21,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             cleanup: cleanup,
             scenes: scenes,
             settings: settings,
+            usage: usage,
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) }
