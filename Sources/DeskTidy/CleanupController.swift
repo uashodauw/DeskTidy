@@ -14,10 +14,14 @@ final class CleanupController: ObservableObject {
         self.scenes = scenes
     }
 
+    /// 收起/恢复要挨个通知每个应用，应用一多会卡住界面，所以放到后台做。
+    /// 用同一条串行队列：连续点清理和恢复时，动作按点击顺序执行，不会乱。
+    private let appActions = DispatchQueue(label: "DeskTidy.appActions", qos: .userInitiated)
+
     var canRestore: Bool { !record.isEmpty }
 
     /// 只隐藏，不关闭：应用和它没保存的内容都还在，点 Dock 图标就能叫回来。
-    /// 返回这次隐藏了几个应用。
+    /// 立刻返回这次要隐藏几个应用，让提示马上出来；真正的隐藏在后台进行。
     @discardableResult
     func clean() -> Int {
         runningApps.refresh()
@@ -26,14 +30,8 @@ final class CleanupController: ObservableObject {
             current: frontmostApp.current,
             keptBundleIDs: scenes.keptBundleIDs
         )
-        for app in targets {
-            NSRunningApplication(processIdentifier: app.processID)?.hide()
-        }
         record.add(targets)
-        // 点开面板时焦点被本应用拿走了，清理完把焦点还给用户正在用的应用
-        if let current = frontmostApp.current {
-            NSRunningApplication(processIdentifier: current.processID)?.activate(options: [])
-        }
+        run(on: targets.map(\.processID), returningFocusTo: frontmostApp.current) { $0.hide() }
         return targets.count
     }
 
@@ -62,12 +60,28 @@ final class CleanupController: ObservableObject {
 
     func restore() {
         runningApps.refresh()
-        for app in record.appsToRestore(running: runningApps.apps) {
-            NSRunningApplication(processIdentifier: app.processID)?.unhide()
-        }
+        let targets = record.appsToRestore(running: runningApps.apps)
         record = CleanupRecord()
-        if let current = frontmostApp.current {
-            NSRunningApplication(processIdentifier: current.processID)?.activate(options: [])
+        run(on: targets.map(\.processID), returningFocusTo: frontmostApp.current) { $0.unhide() }
+    }
+
+    /// 点开面板时焦点被本应用拿走了，做完后把焦点还给用户正在用的应用。
+    private func run(
+        on processIDs: [Int32],
+        returningFocusTo current: RunningApp?,
+        _ action: @escaping (NSRunningApplication) -> Void
+    ) {
+        appActions.async {
+            for processID in processIDs {
+                if let app = NSRunningApplication(processIdentifier: processID) {
+                    action(app)
+                }
+            }
+            DispatchQueue.main.async {
+                if let current {
+                    NSRunningApplication(processIdentifier: current.processID)?.activate(options: [])
+                }
+            }
         }
     }
 }

@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         host.sizingOptions = [.preferredContentSize]
         popover.contentViewController = host
         popover.behavior = .transient
+        // 不要淡入淡出：点了按钮，面板立刻消失，操作才显得跟手
+        popover.animates = false
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {

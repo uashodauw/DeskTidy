@@ -34,16 +34,13 @@ struct PanelView: View {
 
             Button(action: onClean) {
                 Label("一键清理", systemImage: "wand.and.stars")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(TidyButtonStyle(isLarge: true))
 
             Button(action: onRestore) {
                 Label("一键恢复", systemImage: "arrow.uturn.backward")
-                    .frame(maxWidth: .infinity)
             }
-            .controlSize(.large)
+            .buttonStyle(TidyButtonStyle(isLarge: true))
             .disabled(!cleanup.canRestore)
 
             hiddenAppsSection
@@ -110,30 +107,18 @@ struct PanelView: View {
 
     private var scenePicker: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(scenes.selectedScene == nil ? "场景 · 未选，清理时只保留当前在用的应用" : "场景 · 再点一次取消")
+            // 提示只占一行：行数一变，整个面板就会跟着变高变矮，看起来一跳一跳的
+            Text(scenes.selectedScene == nil ? "场景 · 未选，只保留当前在用的应用" : "场景 · 再点一次取消")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
             // 系统的分段选择器不能取消选中，所以用一排按钮
             HStack(spacing: 4) {
                 ForEach(scenes.scenes) { scene in
-                    sceneButton(scene)
+                    Button(scene.name) { scenes.toggle(scene) }
+                        .buttonStyle(TidyButtonStyle(isSelected: scene.id == scenes.selectedID))
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func sceneButton(_ scene: WorkScene) -> some View {
-        let label = Text(scene.name)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity)
-        if scene.id == scenes.selectedID {
-            Button { scenes.toggle(scene) } label: { label }
-                .buttonStyle(.borderedProminent)
-        } else {
-            Button { scenes.toggle(scene) } label: { label }
-                .buttonStyle(.bordered)
         }
     }
 
@@ -211,7 +196,7 @@ struct PanelView: View {
             Text(runningAppsHint)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2, reservesSpace: true)
 
             if runningApps.apps.isEmpty {
                 Text("没有其他正在运行的应用")
