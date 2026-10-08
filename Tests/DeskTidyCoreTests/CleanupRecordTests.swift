@@ -33,6 +33,20 @@ final class CleanupRecordTests: XCTestCase {
         XCTAssertEqual(record.appsToRestore(running: [notes]), [])
     }
 
+    func testRemovingAnAppKeepsTheOthers() {
+        var record = CleanupRecord()
+        record.add([notes, calculator])
+        record.remove(bundleID: notes.bundleID)
+        XCTAssertEqual(record.hiddenBundleIDs, [calculator.bundleID])
+    }
+
+    func testRemovingTheLastAppMakesRecordEmpty() {
+        var record = CleanupRecord()
+        record.add([notes])
+        record.remove(bundleID: notes.bundleID)
+        XCTAssertTrue(record.isEmpty)
+    }
+
     func testRestoresAppAfterItRestartedWithNewProcessID() {
         var record = CleanupRecord()
         record.add([notes])

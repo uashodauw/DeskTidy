@@ -8,6 +8,7 @@ struct PanelView: View {
     @ObservedObject var cleanup: CleanupController
     let onClean: () -> Void
     let onRestore: () -> Void
+    let onBringBack: (RunningApp) -> Void
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 240
@@ -38,6 +39,8 @@ struct PanelView: View {
             }
             .controlSize(.large)
             .disabled(!cleanup.canRestore)
+
+            hiddenAppsSection
 
             Divider()
 
@@ -75,6 +78,51 @@ struct PanelView: View {
         .font(.callout)
     }
 
+    @ViewBuilder
+    private var hiddenAppsSection: some View {
+        let hiddenApps = cleanup.hiddenApps(in: runningApps.apps)
+        if !hiddenApps.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                Text("已收起（\(hiddenApps.count)）· 点一下叫回来")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(hiddenApps) { app in
+                            Button {
+                                onBringBack(app)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    appIcon(app)
+                                    Text(app.name)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.forward.app")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(height: rowHeight)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(height: min(CGFloat(hiddenApps.count) * rowHeight, maxListHeight))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func appIcon(_ app: RunningApp) -> some View {
+        if let icon = runningApps.icon(for: app) {
+            Image(nsImage: icon)
+                .resizable()
+                .frame(width: 18, height: 18)
+        }
+    }
+
     private var runningAppsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("正在运行（\(runningApps.apps.count)）")
@@ -90,11 +138,7 @@ struct PanelView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(runningApps.apps) { app in
                             HStack(spacing: 8) {
-                                if let icon = runningApps.icon(for: app) {
-                                    Image(nsImage: icon)
-                                        .resizable()
-                                        .frame(width: 18, height: 18)
-                                }
+                                appIcon(app)
                                 Text(app.name)
                                     .lineLimit(1)
                                 Spacer()

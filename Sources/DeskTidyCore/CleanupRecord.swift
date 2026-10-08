@@ -15,6 +15,11 @@ public struct CleanupRecord: Equatable {
         }
     }
 
+    /// 用户单独叫回某个应用后，把它从记录里去掉。
+    public mutating func remove(bundleID: String) {
+        hiddenBundleIDs.removeAll { $0 == bundleID }
+    }
+
     /// 恢复时要放回的应用：只包括本应用亲手隐藏、并且现在仍然隐藏着的。
     public func appsToRestore(running: [RunningApp]) -> [RunningApp] {
         running.filter { $0.isHidden && hiddenBundleIDs.contains($0.bundleID) }

@@ -28,6 +28,18 @@ final class CleanupController: ObservableObject {
         }
     }
 
+    /// 已收起、还没被叫回来的应用。
+    func hiddenApps(in running: [RunningApp]) -> [RunningApp] {
+        record.appsToRestore(running: running)
+    }
+
+    func bringBack(_ app: RunningApp) {
+        let runningApp = NSRunningApplication(processIdentifier: app.processID)
+        runningApp?.unhide()
+        runningApp?.activate(options: [])
+        record.remove(bundleID: app.bundleID)
+    }
+
     func restore() {
         runningApps.refresh()
         for app in record.appsToRestore(running: runningApps.apps) {

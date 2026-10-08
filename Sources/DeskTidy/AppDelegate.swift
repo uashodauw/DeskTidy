@@ -16,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             frontmostApp: frontmostApp,
             cleanup: cleanup,
             onClean: { [weak self] in self?.performClean() },
-            onRestore: { [weak self] in self?.performRestore() }
+            onRestore: { [weak self] in self?.performRestore() },
+            onBringBack: { [weak self] app in self?.performBringBack(app) }
         )
         let host = NSHostingController(rootView: panel)
         // 列表长短变化时，面板跟着自动调整高度
@@ -45,6 +46,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func performRestore() {
         popover.performClose(nil)
         cleanup.restore()
+    }
+
+    private func performBringBack(_ app: RunningApp) {
+        popover.performClose(nil)
+        cleanup.bringBack(app)
     }
 
     @objc private func togglePanel() {
