@@ -166,13 +166,14 @@ struct PanelView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(runningApps.apps) { app in
                             HStack(spacing: 8) {
+                                // 勾选框放在最左边：右边缘会被滚动条盖住
+                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                    .toggleStyle(.checkbox)
+                                    .labelsHidden()
                                 appIcon(app)
                                 Text(app.name)
                                     .lineLimit(1)
                                 Spacer()
-                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
-                                    .toggleStyle(.checkbox)
-                                    .labelsHidden()
                             }
                             .frame(height: rowHeight)
                         }
