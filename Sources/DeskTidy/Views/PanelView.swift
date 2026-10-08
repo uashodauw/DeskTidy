@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
 
@@ -55,6 +56,14 @@ struct PanelView: View {
             Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
                 .toggleStyle(.switch)
                 .controlSize(.small)
+
+            HStack {
+                Text("清理快捷键")
+                    .font(.callout)
+                Spacer()
+                KeyboardShortcuts.Recorder(for: .cleanDesktop)
+                    .controlSize(.small)
+            }
 
             Button("退出") {
                 NSApp.terminate(nil)

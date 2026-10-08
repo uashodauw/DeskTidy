@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
 
@@ -39,6 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.action = #selector(togglePanel)
         }
         statusItem = item
+
+        KeyboardShortcuts.onKeyUp(for: .cleanDesktop) { [weak self] in
+            self?.performClean()
+        }
 
         print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里写着「清理」的图标。")
     }
