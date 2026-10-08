@@ -4,6 +4,7 @@ import DeskTidyCore
 
 struct PanelView: View {
     @ObservedObject var runningApps: RunningAppsModel
+    @ObservedObject var frontmostApp: FrontmostAppModel
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 240
@@ -18,6 +19,8 @@ struct PanelView: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
+
+            currentAppRow
 
             Button {
             } label: {
@@ -47,6 +50,27 @@ struct PanelView: View {
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
+    }
+
+    private var currentAppRow: some View {
+        HStack(spacing: 6) {
+            Text("当前在用：")
+                .foregroundStyle(.secondary)
+            if let app = frontmostApp.current {
+                if let icon = runningApps.icon(for: app) {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                }
+                Text(app.name)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            } else {
+                Text("未知")
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .font(.callout)
     }
 
     private var runningAppsSection: some View {

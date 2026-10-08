@@ -6,10 +6,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let runningApps = RunningAppsModel()
+    private let frontmostApp = FrontmostAppModel()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
-        let host = NSHostingController(rootView: PanelView(runningApps: runningApps))
+        let host = NSHostingController(rootView: PanelView(runningApps: runningApps, frontmostApp: frontmostApp))
         // 列表长短变化时，面板跟着自动调整高度
         host.sizingOptions = [.preferredContentSize]
         popover.contentViewController = host
