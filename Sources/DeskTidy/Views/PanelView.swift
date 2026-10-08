@@ -5,6 +5,7 @@ import DeskTidyCore
 struct PanelView: View {
     @ObservedObject var runningApps: RunningAppsModel
     @ObservedObject var frontmostApp: FrontmostAppModel
+    let onClean: () -> Void
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 240
@@ -22,8 +23,7 @@ struct PanelView: View {
 
             currentAppRow
 
-            Button {
-            } label: {
+            Button(action: onClean) {
                 Label("一键清理", systemImage: "wand.and.stars")
                     .frame(maxWidth: .infinity)
             }

@@ -7,10 +7,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let popover = NSPopover()
     private let runningApps = RunningAppsModel()
     private let frontmostApp = FrontmostAppModel()
+    private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
-        let host = NSHostingController(rootView: PanelView(runningApps: runningApps, frontmostApp: frontmostApp))
+        let panel = PanelView(
+            runningApps: runningApps,
+            frontmostApp: frontmostApp,
+            onClean: { [weak self] in self?.performClean() }
+        )
+        let host = NSHostingController(rootView: panel)
         // 列表长短变化时，面板跟着自动调整高度
         host.sizingOptions = [.preferredContentSize]
         popover.contentViewController = host
@@ -27,6 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
 
         print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里写着「清理」的图标。")
+    }
+
+    private func performClean() {
+        popover.performClose(nil)
+        cleanup.clean()
     }
 
     @objc private func togglePanel() {
