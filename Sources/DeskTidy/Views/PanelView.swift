@@ -5,7 +5,9 @@ import DeskTidyCore
 struct PanelView: View {
     @ObservedObject var runningApps: RunningAppsModel
     @ObservedObject var frontmostApp: FrontmostAppModel
+    @ObservedObject var cleanup: CleanupController
     let onClean: () -> Void
+    let onRestore: () -> Void
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 240
@@ -30,12 +32,12 @@ struct PanelView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
 
-            Button {
-            } label: {
+            Button(action: onRestore) {
                 Label("一键恢复", systemImage: "arrow.uturn.backward")
                     .frame(maxWidth: .infinity)
             }
             .controlSize(.large)
+            .disabled(!cleanup.canRestore)
 
             Divider()
 

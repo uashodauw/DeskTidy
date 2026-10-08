@@ -5,13 +5,15 @@ public struct RunningApp: Equatable, Identifiable {
     public let bundleID: String
     public let name: String
     public let processID: Int32
+    public let isHidden: Bool
 
     public var id: String { bundleID }
 
-    public init(bundleID: String, name: String, processID: Int32) {
+    public init(bundleID: String, name: String, processID: Int32, isHidden: Bool = false) {
         self.bundleID = bundleID
         self.name = name
         self.processID = processID
+        self.isHidden = isHidden
     }
 }
 

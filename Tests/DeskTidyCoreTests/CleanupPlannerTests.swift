@@ -22,6 +22,12 @@ final class CleanupPlannerTests: XCTestCase {
         XCTAssertEqual(result, [safari, notes])
     }
 
+    func testSkipsAppsTheUserAlreadyHid() {
+        let hiddenCalculator = RunningApp(bundleID: "com.apple.calculator", name: "计算器", processID: 103, isHidden: true)
+        let result = CleanupPlanner.appsToHide(running: [safari, notes, hiddenCalculator], current: safari)
+        XCTAssertEqual(result, [notes])
+    }
+
     func testNothingToHideWhenOnlyCurrentAppIsRunning() {
         XCTAssertEqual(CleanupPlanner.appsToHide(running: [safari], current: safari), [])
     }
