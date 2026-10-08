@@ -25,6 +25,12 @@ public final class UsageLog {
         }
     }
 
+    /// 第一次见到一个应用时，把"现在"当作起点，之后从这里开始计算它多久没用。
+    public func recordIfUnknown(_ bundleID: String, at date: Date = Date()) {
+        guard times[bundleID] == nil else { return }
+        recordUse(of: bundleID, at: date)
+    }
+
     public func lastUsed(_ bundleID: String) -> Date? {
         times[bundleID].map { Date(timeIntervalSince1970: $0) }
     }

@@ -26,6 +26,12 @@ final class UsageModel {
         }
     }
 
+    func noteSeen(_ apps: [RunningApp]) {
+        for app in apps {
+            log.recordIfUnknown(app.bundleID)
+        }
+    }
+
     func lastUsed(_ app: RunningApp) -> Date? {
         log.lastUsed(app.bundleID)
     }

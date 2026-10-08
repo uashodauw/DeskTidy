@@ -12,10 +12,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let toast = ToastPresenter()
     private let settings = SettingsModel()
     private let usage = UsageModel()
+    private let idleApps = IdleAppsPresenter()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
+        usage.noteSeen(runningApps.apps)
         let panel = PanelView(
             runningApps: runningApps,
             frontmostApp: frontmostApp,
@@ -55,6 +57,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hiddenCount = cleanup.clean()
         toast.show(CleanupFeedback(hiddenCount: hiddenCount))
         settings.playCleanSoundIfEnabled()
+        showIdleApps()
+    }
+
+    private func showIdleApps() {
+        usage.noteSeen(runningApps.apps)
+        let threshold = settings.idleThreshold
+        let idle = IdleAppFinder.idleApps(
+            running: runningApps.apps,
+            current: frontmostApp.current,
+            keptBundleIDs: scenes.selectedScene.keptBundleIDs,
+            lastUsed: usage.lastUsed,
+            threshold: threshold.seconds
+        )
+        guard !idle.isEmpty else {
+            idleApps.close()
+            return
+        }
+        idleApps.show(IdleAppsView(
+            apps: idle,
+            threshold: threshold,
+            icon: runningApps.icon(for:),
+            lastUsed: usage.lastUsed,
+            onDismiss: { [weak self] in self?.idleApps.close() }
+        ))
     }
 
     private func performRestore() {
@@ -73,6 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         } else {
             runningApps.refresh()
+            usage.noteSeen(runningApps.apps)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate(ignoringOtherApps: true)
         }

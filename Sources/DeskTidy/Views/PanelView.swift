@@ -58,6 +58,18 @@ struct PanelView: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
 
+            VStack(alignment: .leading, spacing: 4) {
+                Text("多久没用算很久")
+                    .font(.callout)
+                Picker("多久没用算很久", selection: $settings.idleThreshold) {
+                    ForEach(IdleThreshold.allCases) { threshold in
+                        Text(threshold.label).tag(threshold)
+                    }
+                }
+                .labelsHidden()
+                .controlSize(.small)
+            }
+
             HStack {
                 Text("清理快捷键")
                     .font(.callout)

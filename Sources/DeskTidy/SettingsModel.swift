@@ -9,8 +9,13 @@ final class SettingsModel: ObservableObject {
         didSet { settings.soundEnabled = soundEnabled }
     }
 
+    @Published var idleThreshold: IdleThreshold {
+        didSet { settings.idleThreshold = idleThreshold }
+    }
+
     init() {
         soundEnabled = settings.soundEnabled
+        idleThreshold = settings.idleThreshold
     }
 
     func playCleanSoundIfEnabled() {

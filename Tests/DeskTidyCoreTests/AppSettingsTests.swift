@@ -31,4 +31,18 @@ final class AppSettingsTests: XCTestCase {
         settings.soundEnabled = true
         XCTAssertTrue(AppSettings(defaults: defaults).soundEnabled)
     }
+
+    func testIdleThresholdIsOneHourByDefault() {
+        XCTAssertEqual(AppSettings(defaults: defaults).idleThreshold, .oneHour)
+    }
+
+    func testIdleThresholdIsRemembered() {
+        AppSettings(defaults: defaults).idleThreshold = .oneMinute
+        XCTAssertEqual(AppSettings(defaults: defaults).idleThreshold, .oneMinute)
+    }
+
+    func testUnknownSavedIdleThresholdFallsBackToDefault() {
+        defaults.set(12345, forKey: AppSettings.idleThresholdKey)
+        XCTAssertEqual(AppSettings(defaults: defaults).idleThreshold, .oneHour)
+    }
 }
