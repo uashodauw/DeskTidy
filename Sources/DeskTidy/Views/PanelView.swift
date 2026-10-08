@@ -39,16 +39,20 @@ struct PanelView: View {
 
             scenePicker
 
-            Button(action: onClean) {
-                Label("一键清理", systemImage: "wand.and.stars")
-            }
-            .buttonStyle(TidyButtonStyle(isLarge: true))
+            TidyGlassGroup(spacing: 8) {
+                VStack(spacing: 8) {
+                    Button(action: onClean) {
+                        Label("一键清理", systemImage: "wand.and.stars")
+                    }
+                    .buttonStyle(TidyButtonStyle(isLarge: true))
 
-            Button(action: onRestore) {
-                Label("一键恢复", systemImage: "arrow.uturn.backward")
+                    Button(action: onRestore) {
+                        Label("一键恢复", systemImage: "arrow.uturn.backward")
+                    }
+                    .buttonStyle(TidyButtonStyle(isLarge: true))
+                    .disabled(!cleanup.canRestore)
+                }
             }
-            .buttonStyle(TidyButtonStyle(isLarge: true))
-            .disabled(!cleanup.canRestore)
 
             VStack(alignment: .leading, spacing: 2) {
                 Divider()
@@ -96,10 +100,12 @@ struct PanelView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             // 系统的分段选择器不能取消选中，所以用一排按钮
-            HStack(spacing: 4) {
-                ForEach(scenes.scenes) { scene in
-                    Button(scene.name) { scenes.toggle(scene) }
-                        .buttonStyle(TidyButtonStyle(isSelected: scene.id == scenes.selectedID))
+            TidyGlassGroup(spacing: 4) {
+                HStack(spacing: 4) {
+                    ForEach(scenes.scenes) { scene in
+                        Button(scene.name) { scenes.toggle(scene) }
+                            .buttonStyle(TidyButtonStyle(isSelected: scene.id == scenes.selectedID))
+                    }
                 }
             }
         }
@@ -124,7 +130,14 @@ struct PanelView: View {
                     .foregroundStyle(.secondary)
             }
             .frame(height: 24)
+            .padding(.horizontal, 8)
             .contentShape(Rectangle())
+            // 展开中的那一行垫一层玻璃，一眼看出现在打开的是哪一项
+            .background {
+                if expanded == section {
+                    Color.clear.tidyGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+            }
         }
         .buttonStyle(.plain)
     }

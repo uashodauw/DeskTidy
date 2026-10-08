@@ -26,11 +26,19 @@ final class IdleAppsPresenter {
     private func makePanel() -> NSPanel {
         let panel = NSPanel(
             contentRect: .zero,
-            styleMask: [.titled, .closable, .nonactivatingPanel],
+            styleMask: [.titled, .closable, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: true
         )
         panel.title = "这些应用很久没用了"
+        // 窗口本身透明，只留左上角的关闭按钮，背景交给内容里的玻璃
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.isMovableByWindowBackground = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces]

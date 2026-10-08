@@ -17,6 +17,8 @@ struct IdleAppsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Text("这些应用很久没用了")
+                .font(.headline)
             Text("超过 \(threshold.shortLabel)没用过。勾选想退出的应用，有没保存的内容时它会先问你。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -51,18 +53,24 @@ struct IdleAppsView: View {
             }
             .frame(height: min(CGFloat(apps.count) * rowHeight, maxListHeight))
 
-            HStack {
-                Spacer()
-                Button("暂不退出", action: onDismiss)
-                    .keyboardShortcut(.cancelAction)
-                Button(quitTitle) {
-                    onQuit(selection.appsToQuit(from: apps))
+            TidyGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
+                    Button("暂不退出", action: onDismiss)
+                        .keyboardShortcut(.cancelAction)
+                        .buttonStyle(TidyButtonStyle())
+                    Button(quitTitle) {
+                        onQuit(selection.appsToQuit(from: apps))
+                    }
+                    .buttonStyle(TidyButtonStyle())
+                    .disabled(selection.isEmpty)
                 }
-                .disabled(selection.isEmpty)
             }
         }
         .padding(16)
+        // 给窗口左上角的关闭按钮留位置
+        .padding(.top, 14)
         .frame(width: 300)
+        .tidyGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var quitTitle: String {
