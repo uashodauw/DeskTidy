@@ -141,11 +141,21 @@ struct PanelView: View {
         }
     }
 
+    private func keptBinding(for app: RunningApp) -> Binding<Bool> {
+        Binding(
+            get: { scenes.isKept(app) },
+            set: { scenes.setKept(app, $0) }
+        )
+    }
+
     private var runningAppsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("正在运行（\(runningApps.apps.count)）")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Text("打勾 = 在「\(scenes.selectedScene.name)」场景中保留")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
 
             if runningApps.apps.isEmpty {
                 Text("没有其他正在运行的应用")
@@ -160,6 +170,9 @@ struct PanelView: View {
                                 Text(app.name)
                                     .lineLimit(1)
                                 Spacer()
+                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                    .toggleStyle(.checkbox)
+                                    .labelsHidden()
                             }
                             .frame(height: rowHeight)
                         }

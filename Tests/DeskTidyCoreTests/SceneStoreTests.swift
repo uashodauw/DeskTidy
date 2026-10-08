@@ -48,4 +48,46 @@ final class SceneStoreTests: XCTestCase {
         defaults.set("removed-scene", forKey: SceneStore.selectedSceneKey)
         XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.id, "ai-work")
     }
+
+    private let calculator = "com.apple.calculator"
+
+    private func keptIDs(_ store: SceneStore, _ sceneID: String) -> [String] {
+        store.scenes.first { $0.id == sceneID }?.keptBundleIDs ?? []
+    }
+
+    func testAddingAnAppToAScene() {
+        let store = SceneStore(defaults: defaults)
+        store.setApp(calculator, kept: true, inSceneID: "ai-work")
+        XCTAssertTrue(keptIDs(store, "ai-work").contains(calculator))
+        XCTAssertFalse(keptIDs(store, "design").contains(calculator))
+    }
+
+    func testAddingTheSameAppTwiceKeepsOneEntry() {
+        let store = SceneStore(defaults: defaults)
+        store.setApp(calculator, kept: true, inSceneID: "ai-work")
+        store.setApp(calculator, kept: true, inSceneID: "ai-work")
+        XCTAssertEqual(keptIDs(store, "ai-work").filter { $0 == calculator }.count, 1)
+    }
+
+    func testRemovingAnAppFromAScene() {
+        let store = SceneStore(defaults: defaults)
+        store.setApp("com.apple.Safari", kept: false, inSceneID: "ai-work")
+        XCTAssertFalse(keptIDs(store, "ai-work").contains("com.apple.Safari"))
+    }
+
+    func testEditedSceneIsRememberedByANewStore() {
+        SceneStore(defaults: defaults).setApp(calculator, kept: true, inSceneID: "ai-work")
+        XCTAssertTrue(keptIDs(SceneStore(defaults: defaults), "ai-work").contains(calculator))
+    }
+
+    func testUnknownSceneIsIgnoredWhenEditing() {
+        let store = SceneStore(defaults: defaults)
+        store.setApp(calculator, kept: true, inSceneID: "does-not-exist")
+        XCTAssertEqual(store.scenes, DefaultScenes.all)
+    }
+
+    func testUnreadableSavedScenesFallBackToDefaults() {
+        defaults.set(Data("not json".utf8), forKey: SceneStore.scenesKey)
+        XCTAssertEqual(SceneStore(defaults: defaults).scenes, DefaultScenes.all)
+    }
 }
