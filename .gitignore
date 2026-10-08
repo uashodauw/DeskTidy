@@ -1,5 +1,8 @@
 # Swift Package Manager
 .build/
+
+# scripts/build-app.sh 打包出来的应用
+build/
 .swiftpm/
 
 # Xcode

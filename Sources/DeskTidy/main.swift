@@ -1,4 +1,13 @@
 import AppKit
+import DeskTidyCore
+
+// 必须在创建 AppDelegate 之前：场景、设置和快捷键在那时就会读取保存的数据
+if Bundle.main.bundleIdentifier != nil {
+    LegacySettingsMigration.migrate(
+        legacy: UserDefaults.standard.persistentDomain(forName: LegacySettingsMigration.legacyDomain),
+        into: .standard
+    )
+}
 
 let app = NSApplication.shared
 let delegate = AppDelegate()
