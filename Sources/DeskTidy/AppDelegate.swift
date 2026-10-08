@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let frontmostApp = FrontmostAppModel()
     private let scenes = SceneModel()
     private let toast = ToastPresenter()
+    private let settings = SettingsModel()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             frontmostApp: frontmostApp,
             cleanup: cleanup,
             scenes: scenes,
+            settings: settings,
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) }
@@ -45,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.performClose(nil)
         let hiddenCount = cleanup.clean()
         toast.show(CleanupFeedback(hiddenCount: hiddenCount))
+        settings.playCleanSoundIfEnabled()
     }
 
     private func performRestore() {

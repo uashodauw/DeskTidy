@@ -7,6 +7,7 @@ struct PanelView: View {
     @ObservedObject var frontmostApp: FrontmostAppModel
     @ObservedObject var cleanup: CleanupController
     @ObservedObject var scenes: SceneModel
+    @ObservedObject var settings: SettingsModel
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
@@ -50,6 +51,10 @@ struct PanelView: View {
             runningAppsSection
 
             Divider()
+
+            Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
+                .toggleStyle(.switch)
+                .controlSize(.small)
 
             Button("退出") {
                 NSApp.terminate(nil)
