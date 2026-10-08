@@ -14,7 +14,7 @@ struct ToastView: View {
         .foregroundStyle(.primary)
         .padding(.horizontal, 26)
         .padding(.vertical, 16)
-        .tidyGlass(in: Capsule())
+        .tidyWindowGlass(cornerRadius: 22)
         // 浮窗窗口本身是透明的，四周留一点空，玻璃的阴影和高光才不会被窗口边缘切掉
         .padding(12)
     }

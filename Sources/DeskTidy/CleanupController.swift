@@ -65,7 +65,7 @@ final class CleanupController: ObservableObject {
         run(on: targets.map(\.processID), returningFocusTo: frontmostApp.current) { $0.unhide() }
     }
 
-    /// 点开面板时焦点被本应用拿走了，做完后把焦点还给用户正在用的应用。
+    /// 收起/恢复应用后系统可能把焦点交给别的应用，做完后把焦点还给用户正在用的应用。
     private func run(
         on processIDs: [Int32],
         returningFocusTo current: RunningApp?,

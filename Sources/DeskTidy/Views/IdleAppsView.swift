@@ -70,7 +70,7 @@ struct IdleAppsView: View {
         // 给窗口左上角的关闭按钮留位置
         .padding(.top, 14)
         .frame(width: 300)
-        .tidyGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .tidyWindowGlass(cornerRadius: 18)
     }
 
     private var quitTitle: String {

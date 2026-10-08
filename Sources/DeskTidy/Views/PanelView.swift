@@ -69,6 +69,7 @@ struct PanelView: View {
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
+        .tidyWindowGlass(cornerRadius: 18)
     }
 
     private var currentAppRow: some View {

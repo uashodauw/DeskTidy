@@ -5,7 +5,7 @@ import DeskTidyCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
-    private let popover = NSPopover()
+    private var panel: GlassPanelPresenter?
     private let runningApps = RunningAppsModel()
     private let frontmostApp = FrontmostAppModel()
     private let scenes = SceneModel()
@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
         usage.noteSeen(runningApps.apps)
-        let panel = PanelView(
+        panel = GlassPanelPresenter(rootView: PanelView(
             runningApps: runningApps,
             frontmostApp: frontmostApp,
             cleanup: cleanup,
@@ -28,14 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) }
-        )
-        let host = NSHostingController(rootView: panel)
-        // 列表长短变化时，面板跟着自动调整高度
-        host.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = host
-        popover.behavior = .transient
-        // 不要淡入淡出：点了按钮，面板立刻消失，操作才显得跟手
-        popover.animates = false
+        ))
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
@@ -69,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func performClean() {
-        popover.performClose(nil)
+        panel?.close()
         let hiddenCount = cleanup.clean()
         toast.show(CleanupFeedback(hiddenCount: hiddenCount))
         settings.playCleanSoundIfEnabled()
@@ -106,24 +99,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func performRestore() {
-        popover.performClose(nil)
+        panel?.close()
         cleanup.restore()
     }
 
     private func performBringBack(_ app: RunningApp) {
-        popover.performClose(nil)
+        panel?.close()
         cleanup.bringBack(app)
     }
 
     @objc private func togglePanel() {
         guard let button = statusItem?.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
+        guard let panel else { return }
+        if panel.isShown {
+            panel.close()
         } else {
             runningApps.refresh()
             usage.noteSeen(runningApps.apps)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            NSApp.activate(ignoringOtherApps: true)
+            panel.show(below: button)
         }
     }
 }
