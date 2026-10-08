@@ -27,8 +27,12 @@ struct PanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label(AppInfo.displayName, systemImage: "sparkles")
-                    .font(.headline)
+                // 明确指定纯白：用 .primary 这类系统颜色时，玻璃会让文字和背景"融合"，边缘发虚。
+                // 阴影不能模糊（radius 0）：只往下错开 1 点，让白字在浅色玻璃上也看得清，边缘依然锐利。
+                Label(AppInfo.brandName, systemImage: "sparkles")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1)
                 Spacer()
                 Text("v\(AppInfo.version)")
                     .font(.caption)
