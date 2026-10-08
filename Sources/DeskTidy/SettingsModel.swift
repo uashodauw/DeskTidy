@@ -3,7 +3,8 @@ import DeskTidyCore
 
 final class SettingsModel: ObservableObject {
     private let settings = AppSettings()
-    private let cleanSound = NSSound(named: "Pop")
+    /// 启动时合成一次，之后每次清理直接播放，不会有延迟
+    private let cleanSound = NSSound(data: ChimeSynth.wavData())
 
     @Published var soundEnabled: Bool {
         didSet { settings.soundEnabled = soundEnabled }
