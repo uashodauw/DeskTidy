@@ -90,6 +90,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             idleApps.close()
             return
         }
+        guard settings.shouldShowIdleReminder else { return }
+        settings.noteIdleReminderShown()
         idleApps.show(IdleAppsView(
             apps: idle,
             threshold: threshold,

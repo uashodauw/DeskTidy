@@ -14,8 +14,15 @@ struct PanelView: View {
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
 
+    private enum Area {
+        case hidden, running, settings
+    }
+
+    /// 一次只展开一个，面板才不会被拉得很长。默认全部收起。
+    @State private var expanded: Area?
+
     private let rowHeight: CGFloat = 26
-    private let maxListHeight: CGFloat = 240
+    private let maxListHeight: CGFloat = 156
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -43,36 +50,12 @@ struct PanelView: View {
             .buttonStyle(TidyButtonStyle(isLarge: true))
             .disabled(!cleanup.canRestore)
 
-            hiddenAppsSection
-
-            Divider()
-
-            runningAppsSection
-
-            Divider()
-
-            Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
-                .toggleStyle(.switch)
-                .controlSize(.small)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("多久没用算很久")
-                    .font(.callout)
-                Picker("多久没用算很久", selection: $settings.idleThreshold) {
-                    ForEach(IdleThreshold.allCases) { threshold in
-                        Text(threshold.label).tag(threshold)
-                    }
-                }
-                .labelsHidden()
-                .controlSize(.small)
-            }
-
-            HStack {
-                Text("清理快捷键")
-                    .font(.callout)
-                Spacer()
-                KeyboardShortcuts.Recorder(for: .cleanDesktop)
-                    .controlSize(.small)
+            VStack(alignment: .leading, spacing: 2) {
+                Divider()
+                    .padding(.bottom, 4)
+                hiddenAppsSection
+                runningAppsSection
+                settingsSection
             }
 
             Button("退出") {
@@ -122,40 +105,161 @@ struct PanelView: View {
         }
     }
 
+    // MARK: - 可折叠的区域
+
+    private func sectionHeader(_ title: String, detail: String, section: Area) -> some View {
+        Button {
+            expanded = expanded == section ? nil : section
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: expanded == section ? "chevron.down" : "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 12)
+                Text(title)
+                    .font(.callout)
+                Spacer()
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(height: 24)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     @ViewBuilder
     private var hiddenAppsSection: some View {
         let hiddenApps = cleanup.hiddenApps(in: runningApps.apps)
         if !hiddenApps.isEmpty {
-            Divider()
-            VStack(alignment: .leading, spacing: 6) {
-                Text("已收起（\(hiddenApps.count)）· 点一下叫回来")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            sectionHeader("已收起", detail: "\(hiddenApps.count) 个", section: .hidden)
+            if expanded == .hidden {
+                Text("点一下叫回来")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                appList(hiddenApps) { app in
+                    Button {
+                        onBringBack(app)
+                    } label: {
+                        HStack(spacing: 8) {
+                            appIcon(app)
+                            Text(app.name)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.app")
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(hiddenApps) { app in
-                            Button {
-                                onBringBack(app)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    appIcon(app)
-                                    Text(app.name)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Image(systemName: "arrow.up.forward.app")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .frame(height: rowHeight)
-                                .contentShape(Rectangle())
+    private var runningAppsSection: some View {
+        Group {
+            sectionHeader("正在运行", detail: "\(runningApps.apps.count) 个", section: .running)
+            if expanded == .running {
+                Text(runningAppsHint)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2, reservesSpace: true)
+                if runningApps.apps.isEmpty {
+                    Text("没有其他正在运行的应用")
+                        .font(.callout)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    appList(runningApps.apps) { app in
+                        HStack(spacing: 8) {
+                            // 勾选框放在最左边：右边缘会被滚动条盖住
+                            if scenes.selectedScene != nil {
+                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                    .toggleStyle(.checkbox)
+                                    .labelsHidden()
                             }
-                            .buttonStyle(.plain)
+                            appIcon(app)
+                            Text(app.name)
+                                .lineLimit(1)
+                            Spacer()
+                            if let lastUsed = lastUsedText(for: app) {
+                                Text(lastUsed)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .help("上次使用时间")
+                            }
                         }
                     }
                 }
-                .frame(height: min(CGFloat(hiddenApps.count) * rowHeight, maxListHeight))
             }
         }
+    }
+
+    private var settingsSection: some View {
+        Group {
+            sectionHeader("设置", detail: "", section: .settings)
+            if expanded == .settings {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+
+                    settingPicker("多久没用算很久", selection: $settings.idleThreshold, options: IdleThreshold.allCases, label: \.label)
+
+                    settingPicker(
+                        "很久没用的提醒",
+                        selection: $settings.idleReminderFrequency,
+                        options: IdleReminderFrequency.allCases,
+                        label: \.label
+                    )
+
+                    HStack {
+                        Text("清理快捷键")
+                            .font(.callout)
+                        Spacer()
+                        KeyboardShortcuts.Recorder(for: .cleanDesktop)
+                            .controlSize(.small)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    private func settingPicker<Option: Hashable & Identifiable>(
+        _ title: String,
+        selection: Binding<Option>,
+        options: [Option],
+        label: KeyPath<Option, String>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.callout)
+            Picker(title, selection: selection) {
+                ForEach(options) { option in
+                    Text(option[keyPath: label]).tag(option)
+                }
+            }
+            .labelsHidden()
+            .controlSize(.small)
+        }
+    }
+
+    // MARK: - 列表
+
+    private func appList<Row: View>(_ apps: [RunningApp], @ViewBuilder row: @escaping (RunningApp) -> Row) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(apps) { app in
+                    row(app)
+                        .frame(height: rowHeight)
+                        // 给右边浮出来的滚动条留位置
+                        .padding(.trailing, 14)
+                }
+            }
+        }
+        .frame(height: min(CGFloat(apps.count) * rowHeight, maxListHeight))
     }
 
     @ViewBuilder
@@ -186,52 +290,5 @@ struct PanelView: View {
             return "打勾 = 在「\(scene.name)」场景中保留；右边是上次使用时间"
         }
         return "选一个场景，才能勾选要保留的应用；右边是上次使用时间"
-    }
-
-    private var runningAppsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("正在运行（\(runningApps.apps.count)）")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(runningAppsHint)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .lineLimit(2, reservesSpace: true)
-
-            if runningApps.apps.isEmpty {
-                Text("没有其他正在运行的应用")
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(runningApps.apps) { app in
-                            HStack(spacing: 8) {
-                                // 勾选框放在最左边：右边缘会被滚动条盖住
-                                if scenes.selectedScene != nil {
-                                    Toggle("在当前场景中保留", isOn: keptBinding(for: app))
-                                        .toggleStyle(.checkbox)
-                                        .labelsHidden()
-                                }
-                                appIcon(app)
-                                Text(app.name)
-                                    .lineLimit(1)
-                                Spacer()
-                                if let lastUsed = lastUsedText(for: app) {
-                                    Text(lastUsed)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                        .help("上次使用时间")
-                                }
-                            }
-                            .frame(height: rowHeight)
-                            // 给右边浮出来的滚动条留位置
-                            .padding(.trailing, 14)
-                        }
-                    }
-                }
-                .frame(height: min(CGFloat(runningApps.apps.count) * rowHeight, maxListHeight))
-            }
-        }
     }
 }

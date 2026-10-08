@@ -5,6 +5,8 @@ import Foundation
 public final class AppSettings {
     static let soundEnabledKey = "soundEnabled"
     static let idleThresholdKey = "idleThresholdSeconds"
+    static let idleReminderFrequencyKey = "idleReminderFrequency"
+    static let idleReminderLastShownKey = "idleReminderLastShown"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -18,6 +20,14 @@ public final class AppSettings {
         if let value = defaults.object(forKey: Self.idleThresholdKey),
            (value as? Int).flatMap(IdleThreshold.init(rawValue:)) == nil {
             discard(Self.idleThresholdKey)
+        }
+        if let value = defaults.object(forKey: Self.idleReminderFrequencyKey),
+           (value as? String).flatMap(IdleReminderFrequency.init(rawValue:)) == nil {
+            discard(Self.idleReminderFrequencyKey)
+        }
+        // 上次提醒时间坏了不值得打扰用户，悄悄删掉即可，最多就是多提醒一次
+        if let value = defaults.object(forKey: Self.idleReminderLastShownKey), value as? Double == nil {
+            defaults.removeObject(forKey: Self.idleReminderLastShownKey)
         }
     }
 
@@ -34,6 +44,30 @@ public final class AppSettings {
                 ?? .defaultValue
         }
         set { defaults.set(newValue.rawValue, forKey: Self.idleThresholdKey) }
+    }
+
+    /// "很久没用"窗口多久最多弹一次。没设置过时默认每天最多一次。
+    public var idleReminderFrequency: IdleReminderFrequency {
+        get {
+            (defaults.object(forKey: Self.idleReminderFrequencyKey) as? String)
+                .flatMap(IdleReminderFrequency.init(rawValue:)) ?? .defaultValue
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.idleReminderFrequencyKey) }
+    }
+
+    /// 上次弹出"很久没用"窗口的时间，存下来是为了重启后也不会马上再弹。
+    public var idleReminderLastShown: Date? {
+        get {
+            (defaults.object(forKey: Self.idleReminderLastShownKey) as? Double)
+                .map { Date(timeIntervalSince1970: $0) }
+        }
+        set {
+            if let newValue {
+                defaults.set(newValue.timeIntervalSince1970, forKey: Self.idleReminderLastShownKey)
+            } else {
+                defaults.removeObject(forKey: Self.idleReminderLastShownKey)
+            }
+        }
     }
 
     private func discard(_ key: String) {
