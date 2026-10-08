@@ -79,6 +79,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             threshold: threshold,
             icon: runningApps.icon(for:),
             lastUsed: usage.lastUsed,
+            onQuit: { [weak self] apps in
+                self?.idleApps.close()
+                self?.cleanup.politelyQuit(apps)
+            },
             onDismiss: { [weak self] in self?.idleApps.close() }
         ))
     }

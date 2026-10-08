@@ -7,14 +7,17 @@ struct IdleAppsView: View {
     let threshold: IdleThreshold
     let icon: (RunningApp) -> NSImage?
     let lastUsed: (RunningApp) -> Date?
+    let onQuit: ([RunningApp]) -> Void
     let onDismiss: () -> Void
+
+    @State private var selection = QuitSelection()
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 240
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("超过 \(threshold.shortLabel)没用过，退出它们能让电脑更轻快。")
+            Text("超过 \(threshold.shortLabel)没用过。勾选想退出的应用，有没保存的内容时它会先问你。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -23,6 +26,10 @@ struct IdleAppsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(apps) { app in
                         HStack(spacing: 8) {
+                            // 勾选框放在最左边：右边缘会被滚动条盖住
+                            Toggle("退出 \(app.name)", isOn: selectedBinding(for: app))
+                                .toggleStyle(.checkbox)
+                                .labelsHidden()
                             if let image = icon(app) {
                                 Image(nsImage: image)
                                     .resizable()
@@ -46,11 +53,27 @@ struct IdleAppsView: View {
 
             HStack {
                 Spacer()
-                Button("知道了", action: onDismiss)
-                    .keyboardShortcut(.defaultAction)
+                Button("暂不退出", action: onDismiss)
+                    .keyboardShortcut(.cancelAction)
+                Button(quitTitle) {
+                    onQuit(selection.appsToQuit(from: apps))
+                }
+                .disabled(selection.isEmpty)
             }
         }
         .padding(16)
-        .frame(width: 280)
+        .frame(width: 300)
+    }
+
+    private var quitTitle: String {
+        let count = selection.appsToQuit(from: apps).count
+        return count == 0 ? "退出所选应用" : "退出所选应用（\(count)）"
+    }
+
+    private func selectedBinding(for app: RunningApp) -> Binding<Bool> {
+        Binding(
+            get: { selection.isSelected(app) },
+            set: { selection.setSelected(app, $0) }
+        )
     }
 }

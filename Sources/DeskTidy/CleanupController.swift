@@ -49,6 +49,17 @@ final class CleanupController: ObservableObject {
         record.remove(bundleID: app.bundleID)
     }
 
+    /// 只用普通退出，绝不能改成 forceTerminate：普通退出时，有没保存内容的应用会先问用户要不要保存。
+    /// 退出前先取消隐藏，否则"是否保存"的询问会出现在看不见的窗口上。
+    func politelyQuit(_ apps: [RunningApp]) {
+        for app in apps {
+            let runningApp = NSRunningApplication(processIdentifier: app.processID)
+            runningApp?.unhide()
+            runningApp?.terminate()
+            record.remove(bundleID: app.bundleID)
+        }
+    }
+
     func restore() {
         runningApps.refresh()
         for app in record.appsToRestore(running: runningApps.apps) {
