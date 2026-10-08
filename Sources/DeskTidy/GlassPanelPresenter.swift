@@ -1,13 +1,29 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 
 /// 菜单栏图标下面的玻璃面板。
 /// 不用系统的 NSPopover：它的背景是系统画的不透明底色，改不成半透明玻璃。
+///
+/// 窗口固定高度、背景全透明，面板只占上面一部分：
+/// 展开/收起列表时，变化发生在窗口里面，才能用 SwiftUI 动画平滑地伸缩；
+/// 如果让窗口跟着内容改大小，窗口只能一下子跳到新尺寸，看起来一卡一卡的。
+/// 透明部分的点击会直接穿过去，不会挡住后面的窗口。
 final class GlassPanelPresenter: NSObject {
+    static let panelWidth: CGFloat = 260
+    static let cornerRadius: CGFloat = 18
+    /// 面板四周留给阴影的空间
+    static let shadowMargin: CGFloat = 24
+
     private let panel: KeyablePanel
-    private var anchor: NSRect = .zero
     private var clickOutsideMonitor: Any?
-    private var observers: [NSObjectProtocol] = []
+    private var activationObserver: NSObjectProtocol?
+    private(set) var isShown = false
+    /// 快速连续开关时，旧的收起动画结束后不能把新打开的面板也收掉
+    private var generation = 0
+
+    private let maxHeight: CGFloat = 760
+    private let dropDistance: CGFloat = 8
 
     init<Content: View>(rootView: Content) {
         panel = KeyablePanel(
@@ -19,61 +35,81 @@ final class GlassPanelPresenter: NSObject {
         super.init()
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // 阴影由 SwiftUI 画：窗口自带的阴影按整个窗口算，面板伸缩时不会跟着变
+        panel.hasShadow = false
         panel.level = .popUpMenu
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.onCancel = { [weak self] in self?.close() }
-        panel.contentView = NSHostingView(rootView: rootView)
 
-        // 内容变高变矮（展开/收起列表）时，窗口默认往上长；这里把顶边钉回菜单栏下面
-        observers.append(NotificationCenter.default.addObserver(
-            forName: NSWindow.didResizeNotification, object: panel, queue: .main
-        ) { [weak self] _ in self?.reposition() })
+        let host = NSHostingView(rootView: PanelContainer { rootView })
+        // 窗口大小由这里决定，不跟着内容变
+        host.sizingOptions = []
+        panel.contentView = host
+
         // 用户切到别的应用（比如 Command + Tab）时收起，和系统弹出框的习惯一致
-        observers.append(NSWorkspace.shared.notificationCenter.addObserver(
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.close() })
+        ) { [weak self] _ in self?.close() }
     }
 
     deinit {
-        observers.forEach { NotificationCenter.default.removeObserver($0) }
-        observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        if let activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
+        }
         removeClickOutsideMonitor()
     }
 
-    var isShown: Bool { panel.isVisible }
-
+    /// 像 iOS 一样从菜单栏轻轻落下并淡入，最后带一点点回弹。
+    /// 动画做在整个窗口上而不是 SwiftUI 里：老系统的毛玻璃是系统直接画的，SwiftUI 的缩放和透明度管不到它。
     func show(below button: NSStatusBarButton) {
         guard let buttonWindow = button.window else { return }
-        anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-        if let contentView = panel.contentView {
-            panel.setContentSize(contentView.fittingSize)
-        }
-        reposition()
+        generation += 1
+        isShown = true
+        let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        let finalFrame = frame(below: anchor)
+
+        panel.setFrame(finalFrame.offsetBy(dx: 0, dy: dropDistance), display: false)
+        panel.alphaValue = 0
         // 不激活本应用：用户正在用的应用保持在前台，面板照样能接收键盘输入（录快捷键）
         panel.makeKeyAndOrderFront(nil)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.26
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 1.15, 0.35, 1)
+            panel.animator().setFrame(finalFrame, display: true)
+            panel.animator().alphaValue = 1
+        }
         installClickOutsideMonitor()
     }
 
     func close() {
-        guard panel.isVisible else { return }
-        panel.orderOut(nil)
+        guard isShown else { return }
+        generation += 1
+        let current = generation
+        isShown = false
         removeClickOutsideMonitor()
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.12
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            guard let self, self.generation == current else { return }
+            self.panel.orderOut(nil)
+        })
     }
 
-    private func reposition() {
-        let size = panel.frame.size
+    /// 窗口顶边就是面板顶边；左右和下面留出阴影的位置。
+    private func frame(below anchor: NSRect) -> NSRect {
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main
-        var x = anchor.midX - size.width / 2
-        if let visible = screen?.visibleFrame {
-            x = min(max(x, visible.minX + 8), visible.maxX - size.width - 8)
-        }
-        let origin = NSPoint(x: x, y: anchor.minY - 6 - size.height)
-        if panel.frame.origin != origin {
-            panel.setFrameOrigin(origin)
-        }
+        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let margin = Self.shadowMargin
+        let width = Self.panelWidth + margin * 2
+        let top = anchor.minY - 6
+        let height = min(maxHeight, top - visible.minY)
+        var x = anchor.midX - width / 2
+        x = min(max(x, visible.minX - margin + 8), visible.maxX - width + margin - 8)
+        return NSRect(x: x, y: top - height, width: width, height: height)
     }
 
     /// 点到其他应用的任何地方就收起。点本应用自己的菜单栏图标不会触发这里，交给图标自己切换。
@@ -89,6 +125,41 @@ final class GlassPanelPresenter: NSObject {
             NSEvent.removeMonitor(clickOutsideMonitor)
         }
         clickOutsideMonitor = nil
+    }
+}
+
+/// 把面板放在透明窗口的顶部，并在面板外围画阴影。
+private struct PanelContainer<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .frame(width: GlassPanelPresenter.panelWidth)
+            .background { PanelShadow(cornerRadius: GlassPanelPresenter.cornerRadius) }
+            .padding(.horizontal, GlassPanelPresenter.shadowMargin)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+}
+
+/// 只在面板边缘外面画阴影，不画在面板里面：玻璃是半透明的，里面有阴影会把整块玻璃弄脏。
+private struct PanelShadow: View {
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
+            .fill(Color.black)
+            .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
+            .mask(OutsideOf(cornerRadius: cornerRadius).fill(style: FillStyle(eoFill: true)))
+    }
+}
+
+private struct OutsideOf: Shape {
+    let cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect.insetBy(dx: -GlassPanelPresenter.shadowMargin * 2, dy: -GlassPanelPresenter.shadowMargin * 2))
+        path.addRoundedRect(in: rect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius), style: .circular)
+        return path
     }
 }
 

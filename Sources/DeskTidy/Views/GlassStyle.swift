@@ -21,7 +21,8 @@ extension View {
     /// 窗口本身必须是透明的（isOpaque = false、backgroundColor = .clear），否则透不出去。
     @ViewBuilder
     func tidyWindowGlass(cornerRadius: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        // 用普通圆角而不是 .continuous：要和退路方案里模糊层的圆角遮罩完全重合，边框才贴得住
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             glassEffect(.regular, in: shape)
@@ -35,8 +36,7 @@ extension View {
 
     private func behindWindowGlass(in shape: RoundedRectangle) -> some View {
         background {
-            BehindWindowBlur()
-                .clipShape(shape)
+            BehindWindowBlur(cornerRadius: shape.cornerSize.width)
                 .overlay(shape.stroke(Color.white.opacity(0.25), lineWidth: 0.5))
         }
     }
@@ -65,16 +65,33 @@ private enum TidyGlass {
 #endif
 
 /// 模糊窗口后面的桌面和其他应用（SwiftUI 自带的毛玻璃只模糊本窗口里的内容）。
+/// 圆角必须用 maskImage 做：透窗模糊由系统直接合成，SwiftUI 的 clipShape 裁不到它，四个角会露出直角方块。
 private struct BehindWindowBlur: NSViewRepresentable {
+    let cornerRadius: CGFloat
+
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = .menu
         view.blendingMode = .behindWindow
         view.state = .active
+        view.maskImage = Self.roundedMask(cornerRadius: cornerRadius)
         return view
     }
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+
+    /// 一张能拉伸的小圆角图：四个角保持圆角，中间部分随视图大小拉伸。
+    private static func roundedMask(cornerRadius: CGFloat) -> NSImage {
+        let edge = cornerRadius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: cornerRadius, yRadius: cornerRadius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: cornerRadius, left: cornerRadius, bottom: cornerRadius, right: cornerRadius)
+        image.resizingMode = .stretch
+        return image
+    }
 }
 
 /// 把相邻的几块玻璃放进同一个容器：系统一次性画完，更省电也更流畅，靠近时还会自然地融在一起。

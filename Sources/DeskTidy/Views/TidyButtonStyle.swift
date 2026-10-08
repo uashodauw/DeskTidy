@@ -10,14 +10,25 @@ struct TidyButtonStyle: ButtonStyle {
         TidyButtonBody(
             label: configuration.label,
             isDark: isSelected || configuration.isPressed,
+            isPressed: configuration.isPressed,
             isLarge: isLarge
         )
     }
 }
 
+enum TidyMotion {
+    /// 按下：快速缩一点；松手：带一点回弹地弹回去，和 iOS 按钮的手感一致
+    static let press = Animation.spring(response: 0.22, dampingFraction: 0.62)
+    /// 颜色变化：很短的渐变，比硬切顺眼，又不会让人觉得慢
+    static let color = Animation.easeOut(duration: 0.14)
+    /// 展开/收起、切换场景
+    static let layout = Animation.spring(response: 0.34, dampingFraction: 0.86)
+}
+
 private struct TidyButtonBody<Label: View>: View {
     let label: Label
     let isDark: Bool
+    let isPressed: Bool
     let isLarge: Bool
 
     @Environment(\.isEnabled) private var isEnabled
@@ -42,6 +53,8 @@ private struct TidyButtonBody<Label: View>: View {
             .contentShape(Capsule())
             .tidyGlass(in: Capsule(), tint: isDark ? Self.darkGray : nil, interactive: isEnabled)
             .opacity(isEnabled ? 1 : 0.45)
-            .transaction { $0.animation = nil }
+            .animation(TidyMotion.color, value: isDark)
+            .scaleEffect(isPressed ? 0.96 : 1)
+            .animation(TidyMotion.press, value: isPressed)
     }
 }

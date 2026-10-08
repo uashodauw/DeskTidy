@@ -100,11 +100,14 @@ struct PanelView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+                .contentTransition(.opacity)
             // 系统的分段选择器不能取消选中，所以用一排按钮
             TidyGlassGroup(spacing: 4) {
                 HStack(spacing: 4) {
                     ForEach(scenes.scenes) { scene in
-                        Button(scene.name) { scenes.toggle(scene) }
+                        Button(scene.name) {
+                            withAnimation(TidyMotion.layout) { scenes.toggle(scene) }
+                        }
                             .buttonStyle(TidyButtonStyle(isSelected: scene.id == scenes.selectedID))
                     }
                 }
@@ -115,32 +118,18 @@ struct PanelView: View {
     // MARK: - 可折叠的区域
 
     private func sectionHeader(_ title: String, detail: String, section: Area) -> some View {
-        Button {
-            expanded = expanded == section ? nil : section
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: expanded == section ? "chevron.down" : "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 12)
-                Text(title)
-                    .font(.callout)
-                Spacer()
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(height: 24)
-            .padding(.horizontal, 8)
-            .contentShape(Rectangle())
-            // 展开中的那一行垫一层玻璃，一眼看出现在打开的是哪一项
-            .background {
-                if expanded == section {
-                    Color.clear.tidyGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
+        SectionHeader(title: title, detail: detail, isExpanded: expanded == section) {
+            withAnimation(TidyMotion.layout) {
+                expanded = expanded == section ? nil : section
             }
         }
-        .buttonStyle(.plain)
+    }
+
+    private var sectionTransition: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: -6)),
+            removal: .opacity
+        )
     }
 
     @ViewBuilder
@@ -149,25 +138,28 @@ struct PanelView: View {
         if !hiddenApps.isEmpty {
             sectionHeader("已收起", detail: "\(hiddenApps.count) 个", section: .hidden)
             if expanded == .hidden {
-                Text("点一下叫回来")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                appList(hiddenApps) { app in
-                    Button {
-                        onBringBack(app)
-                    } label: {
-                        HStack(spacing: 8) {
-                            appIcon(app)
-                            Text(app.name)
-                                .lineLimit(1)
-                            Spacer()
-                            Image(systemName: "arrow.up.forward.app")
-                                .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("点一下叫回来")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    appList(hiddenApps) { app in
+                        Button {
+                            onBringBack(app)
+                        } label: {
+                            HStack(spacing: 8) {
+                                appIcon(app)
+                                Text(app.name)
+                                    .lineLimit(1)
+                                Spacer()
+                                Image(systemName: "arrow.up.forward.app")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
                         }
-                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .transition(sectionTransition)
             }
         }
     }
@@ -176,36 +168,41 @@ struct PanelView: View {
         Group {
             sectionHeader("正在运行", detail: "\(runningApps.apps.count) 个", section: .running)
             if expanded == .running {
-                Text(runningAppsHint)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(2, reservesSpace: true)
-                if runningApps.apps.isEmpty {
-                    Text("没有其他正在运行的应用")
-                        .font(.callout)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(runningAppsHint)
+                        .font(.caption2)
                         .foregroundStyle(.tertiary)
-                } else {
-                    appList(runningApps.apps) { app in
-                        HStack(spacing: 8) {
-                            // 勾选框放在最左边：右边缘会被滚动条盖住
-                            if scenes.selectedScene != nil {
-                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
-                                    .toggleStyle(.checkbox)
-                                    .labelsHidden()
-                            }
-                            appIcon(app)
-                            Text(app.name)
-                                .lineLimit(1)
-                            Spacer()
-                            if let lastUsed = lastUsedText(for: app) {
-                                Text(lastUsed)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .help("上次使用时间")
+                        .lineLimit(2, reservesSpace: true)
+                        .contentTransition(.opacity)
+                    if runningApps.apps.isEmpty {
+                        Text("没有其他正在运行的应用")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        appList(runningApps.apps) { app in
+                            HStack(spacing: 8) {
+                                // 勾选框放在最左边：右边缘会被滚动条盖住
+                                if scenes.selectedScene != nil {
+                                    Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                        .toggleStyle(.checkbox)
+                                        .labelsHidden()
+                                        .transition(.opacity)
+                                }
+                                appIcon(app)
+                                Text(app.name)
+                                    .lineLimit(1)
+                                Spacer()
+                                if let lastUsed = lastUsedText(for: app) {
+                                    Text(lastUsed)
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .help("上次使用时间")
+                                }
                             }
                         }
                     }
                 }
+                .transition(sectionTransition)
             }
         }
     }
@@ -237,6 +234,7 @@ struct PanelView: View {
                     }
                 }
                 .padding(.vertical, 4)
+                .transition(sectionTransition)
             }
         }
     }
@@ -304,5 +302,49 @@ struct PanelView: View {
             return "打勾 = 在「\(scene.name)」场景中保留；右边是上次使用时间"
         }
         return "选一个场景，才能勾选要保留的应用；右边是上次使用时间"
+    }
+}
+
+/// 可折叠区域的标题行：箭头转动展开，鼠标移上去有淡淡的高亮，展开中的那一行垫一层玻璃。
+private struct SectionHeader: View {
+    let title: String
+    let detail: String
+    let isExpanded: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .frame(width: 12)
+                Text(title)
+                    .font(.callout)
+                Spacer()
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(height: 24)
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(isHovered && !isExpanded ? 0.06 : 0))
+                    Color.clear
+                        .tidyGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .opacity(isExpanded ? 1 : 0)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(TidyMotion.color) { isHovered = hovering }
+        }
     }
 }
