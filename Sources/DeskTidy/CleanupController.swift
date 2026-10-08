@@ -17,7 +17,9 @@ final class CleanupController: ObservableObject {
     var canRestore: Bool { !record.isEmpty }
 
     /// 只隐藏，不关闭：应用和它没保存的内容都还在，点 Dock 图标就能叫回来。
-    func clean() {
+    /// 返回这次隐藏了几个应用。
+    @discardableResult
+    func clean() -> Int {
         runningApps.refresh()
         let targets = CleanupPlanner.appsToHide(
             running: runningApps.apps,
@@ -32,6 +34,7 @@ final class CleanupController: ObservableObject {
         if let current = frontmostApp.current {
             NSRunningApplication(processIdentifier: current.processID)?.activate(options: [])
         }
+        return targets.count
     }
 
     /// 已收起、还没被叫回来的应用。

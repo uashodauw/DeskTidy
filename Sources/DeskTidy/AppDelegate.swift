@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let runningApps = RunningAppsModel()
     private let frontmostApp = FrontmostAppModel()
     private let scenes = SceneModel()
+    private let toast = ToastPresenter()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -42,7 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func performClean() {
         popover.performClose(nil)
-        cleanup.clean()
+        let hiddenCount = cleanup.clean()
+        toast.show(CleanupFeedback(hiddenCount: hiddenCount))
     }
 
     private func performRestore() {
