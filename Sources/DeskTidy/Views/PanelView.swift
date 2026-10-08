@@ -3,6 +3,11 @@ import SwiftUI
 import DeskTidyCore
 
 struct PanelView: View {
+    @ObservedObject var runningApps: RunningAppsModel
+
+    private let rowHeight: CGFloat = 26
+    private let maxListHeight: CGFloat = 240
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -31,6 +36,10 @@ struct PanelView: View {
 
             Divider()
 
+            runningAppsSection
+
+            Divider()
+
             Button("退出") {
                 NSApp.terminate(nil)
             }
@@ -38,5 +47,38 @@ struct PanelView: View {
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
+    }
+
+    private var runningAppsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("正在运行（\(runningApps.apps.count)）")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if runningApps.apps.isEmpty {
+                Text("没有其他正在运行的应用")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(runningApps.apps) { app in
+                            HStack(spacing: 8) {
+                                if let icon = runningApps.icon(for: app) {
+                                    Image(nsImage: icon)
+                                        .resizable()
+                                        .frame(width: 18, height: 18)
+                                }
+                                Text(app.name)
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                            .frame(height: rowHeight)
+                        }
+                    }
+                }
+                .frame(height: min(CGFloat(runningApps.apps.count) * rowHeight, maxListHeight))
+            }
+        }
     }
 }

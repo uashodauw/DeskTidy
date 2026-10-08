@@ -44,7 +44,7 @@
 - **要做的事：** 从 App Store 安装 Xcode，然后按 `README.md` 里"在本地运行"的命令执行。
 - **验收：**
   1. 终端执行 `swift run DeskTidy`，显示"桌面清理 0.1.0 已启动，请看屏幕右上角菜单栏里写着「清理」的图标。"
-  2. 终端执行 `swift test`，输出中能看到 `Executed 2 tests, with 0 failures`。
+  2. 终端执行 `swift test`，输出中能看到 `Executed N tests, with 0 failures`（N 是测试数量）。
 
 ---
 

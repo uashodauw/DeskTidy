@@ -41,7 +41,7 @@ swift run DeskTidy
 swift test
 ```
 
-输出中能看到 `Executed 2 tests, with 0 failures` 即为通过。之后可能还有一行 `Test run with 0 tests passed`，属于正常现象。
+输出中能看到 `Executed N tests, with 0 failures`（N 是测试数量，会随开发增加）即为通过。之后可能还有一行 `Test run with 0 tests passed`，属于正常现象。
 
 ## 用 Xcode 打开
 
