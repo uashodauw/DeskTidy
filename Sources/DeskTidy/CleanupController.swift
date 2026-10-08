@@ -24,7 +24,7 @@ final class CleanupController: ObservableObject {
         let targets = CleanupPlanner.appsToHide(
             running: runningApps.apps,
             current: frontmostApp.current,
-            keptBundleIDs: scenes.selectedScene.keptBundleIDs
+            keptBundleIDs: scenes.keptBundleIDs
         )
         for app in targets {
             NSRunningApplication(processIdentifier: app.processID)?.hide()

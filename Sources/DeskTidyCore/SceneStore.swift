@@ -4,6 +4,8 @@ import Foundation
 public final class SceneStore {
     static let selectedSceneKey = "selectedSceneID"
     static let scenesKey = "scenes"
+    /// 存成空字符串而不是删掉这一项：删掉会被当成"没选过"，又回到第一个场景。
+    static let noSceneID = ""
     /// 以后改了场景的保存格式，就把这个数字加 1，并在 load 里处理旧格式，否则老用户的场景会被当成坏数据清掉。
     static let currentVersion = 1
 
@@ -42,15 +44,27 @@ public final class SceneStore {
         }
     }
 
-    /// 没选过、或者存的场景已经不存在时，用第一个场景。
-    public var selectedScene: WorkScene {
+    /// nil 表示用户主动选了"无场景"。没选过、或者存的场景已经不存在时，用第一个场景。
+    public var selectedScene: WorkScene? {
         let savedID = defaults.string(forKey: Self.selectedSceneKey)
+        if savedID == Self.noSceneID {
+            return nil
+        }
         return scenes.first { $0.id == savedID } ?? scenes[0]
+    }
+
+    /// 当前要保留的应用。无场景时为空：清理时只保留当前在用的应用。
+    public var keptBundleIDs: [String] {
+        selectedScene?.keptBundleIDs ?? []
     }
 
     public func select(sceneID: String) {
         guard scenes.contains(where: { $0.id == sceneID }) else { return }
         defaults.set(sceneID, forKey: Self.selectedSceneKey)
+    }
+
+    public func selectNoScene() {
+        defaults.set(Self.noSceneID, forKey: Self.selectedSceneKey)
     }
 
     /// 把某个应用加进场景的保留名单，或者从名单里去掉。改完立刻保存。

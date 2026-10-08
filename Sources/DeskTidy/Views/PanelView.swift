@@ -110,16 +110,30 @@ struct PanelView: View {
 
     private var scenePicker: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("场景")
+            Text(scenes.selectedScene == nil ? "场景 · 未选，清理时只保留当前在用的应用" : "场景 · 再点一次取消")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Picker("场景", selection: $scenes.selectedID) {
+                .fixedSize(horizontal: false, vertical: true)
+            // 系统的分段选择器不能取消选中，所以用一排按钮
+            HStack(spacing: 4) {
                 ForEach(scenes.scenes) { scene in
-                    Text(scene.name).tag(scene.id)
+                    sceneButton(scene)
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+        }
+    }
+
+    @ViewBuilder
+    private func sceneButton(_ scene: WorkScene) -> some View {
+        let label = Text(scene.name)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity)
+        if scene.id == scenes.selectedID {
+            Button { scenes.toggle(scene) } label: { label }
+                .buttonStyle(.borderedProminent)
+        } else {
+            Button { scenes.toggle(scene) } label: { label }
+                .buttonStyle(.bordered)
         }
     }
 
@@ -182,12 +196,19 @@ struct PanelView: View {
         return usage.lastUsed(app).map { RelativeTime.describe($0) }
     }
 
+    private var runningAppsHint: String {
+        if let scene = scenes.selectedScene {
+            return "打勾 = 在「\(scene.name)」场景中保留；右边是上次使用时间"
+        }
+        return "选一个场景，才能勾选要保留的应用；右边是上次使用时间"
+    }
+
     private var runningAppsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("正在运行（\(runningApps.apps.count)）")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("打勾 = 在「\(scenes.selectedScene.name)」场景中保留；右边是上次使用时间")
+            Text(runningAppsHint)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -202,9 +223,11 @@ struct PanelView: View {
                         ForEach(runningApps.apps) { app in
                             HStack(spacing: 8) {
                                 // 勾选框放在最左边：右边缘会被滚动条盖住
-                                Toggle("在当前场景中保留", isOn: keptBinding(for: app))
-                                    .toggleStyle(.checkbox)
-                                    .labelsHidden()
+                                if scenes.selectedScene != nil {
+                                    Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                        .toggleStyle(.checkbox)
+                                        .labelsHidden()
+                                }
                                 appIcon(app)
                                 Text(app.name)
                                     .lineLimit(1)

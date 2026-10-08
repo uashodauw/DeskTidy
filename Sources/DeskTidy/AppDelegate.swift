@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let idle = IdleAppFinder.idleApps(
             running: runningApps.apps,
             current: frontmostApp.current,
-            keptBundleIDs: scenes.selectedScene.keptBundleIDs,
+            keptBundleIDs: scenes.keptBundleIDs,
             lastUsed: usage.lastUsed,
             threshold: threshold.seconds
         )

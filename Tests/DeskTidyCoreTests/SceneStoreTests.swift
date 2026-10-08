@@ -29,24 +29,59 @@ final class SceneStoreTests: XCTestCase {
     }
 
     func testFirstSceneIsSelectedByDefault() {
-        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.name, "AI 工作")
+        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene?.name, "AI 工作")
     }
 
     func testSelectionIsRememberedByANewStore() {
         SceneStore(defaults: defaults).select(sceneID: "meeting")
-        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.name, "开会")
+        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene?.name, "开会")
     }
 
     func testUnknownSceneIDIsIgnored() {
         let store = SceneStore(defaults: defaults)
         store.select(sceneID: "design")
         store.select(sceneID: "does-not-exist")
-        XCTAssertEqual(store.selectedScene.id, "design")
+        XCTAssertEqual(store.selectedScene?.id, "design")
     }
 
     func testFallsBackToFirstSceneWhenSavedIDIsStale() {
         defaults.set("removed-scene", forKey: SceneStore.selectedSceneKey)
-        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.id, "ai-work")
+        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene?.id, "ai-work")
+    }
+
+    func testChoosingNoSceneClearsSelection() {
+        let store = SceneStore(defaults: defaults)
+        store.selectNoScene()
+        XCTAssertNil(store.selectedScene)
+        XCTAssertEqual(store.keptBundleIDs, [])
+    }
+
+    func testNoSceneIsRememberedByANewStore() {
+        SceneStore(defaults: defaults).selectNoScene()
+        XCTAssertNil(SceneStore(defaults: defaults).selectedScene)
+    }
+
+    func testChoosingASceneAfterNoSceneSelectsIt() {
+        let store = SceneStore(defaults: defaults)
+        store.selectNoScene()
+        store.select(sceneID: "meeting")
+        XCTAssertEqual(store.selectedScene?.id, "meeting")
+        XCTAssertEqual(store.keptBundleIDs, DefaultScenes.all[2].keptBundleIDs)
+    }
+
+    func testNoSceneLeavesSceneContentsUntouched() {
+        let store = SceneStore(defaults: defaults)
+        store.selectNoScene()
+        XCTAssertEqual(SceneStore(defaults: defaults).scenes, DefaultScenes.all)
+    }
+
+    func testNoSceneKeepsOnlyTheCurrentAppWhenCleaning() {
+        let store = SceneStore(defaults: defaults)
+        store.selectNoScene()
+        let safari = RunningApp(bundleID: "com.apple.Safari", name: "Safari", processID: 1)
+        let notes = RunningApp(bundleID: "com.apple.Notes", name: "备忘录", processID: 2)
+        let hidden = CleanupPlanner.appsToHide(running: [safari, notes], current: notes, keptBundleIDs: store.keptBundleIDs)
+        XCTAssertEqual(hidden, [safari])
     }
 
     private let calculator = "com.apple.calculator"
@@ -113,7 +148,7 @@ final class SceneStoreTests: XCTestCase {
     func testRecoveryResetsSelectedScene() {
         defaults.set("meeting", forKey: SceneStore.selectedSceneKey)
         defaults.set("乱码乱码", forKey: SceneStore.scenesKey)
-        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene.id, "ai-work")
+        XCTAssertEqual(SceneStore(defaults: defaults).selectedScene?.id, "ai-work")
     }
 
     func testSavedScenesCarryAVersion() throws {
