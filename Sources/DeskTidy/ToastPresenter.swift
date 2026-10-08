@@ -55,6 +55,8 @@ final class ToastPresenter {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.ignoresMouseEvents = true
+        // 面板默认在本应用失去焦点时立刻隐藏，用户一点别的窗口浮窗就没了
+        panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         panel.isReleasedWhenClosed = false
