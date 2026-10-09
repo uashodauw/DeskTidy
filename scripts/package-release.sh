@@ -56,5 +56,6 @@ fi
 echo ""
 echo "完成：$DMG"
 echo "支持的芯片：$(lipo -archs "$APP/Contents/MacOS/DeskTidy")"
+echo "最低系统版本：macOS $(vtool -arch arm64 -show-build "$APP/Contents/MacOS/DeskTidy" 2>/dev/null | awk '/minos/ {print $2; exit}')"
 echo "把这个文件发给别人即可。已在访达里为你打开它所在的文件夹。"
 open -R "$DMG"
