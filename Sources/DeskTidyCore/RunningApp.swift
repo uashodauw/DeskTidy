@@ -26,4 +26,28 @@ public enum RunningAppList {
         }
         return unique.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
+
+    /// 按"多久前用过"排序：正在用的排第一，越近用过越靠前；没有使用记录的放最后，按名字排。
+    public static func sortedByRecentUse(
+        _ apps: [RunningApp],
+        currentBundleID: String?,
+        lastUsed: (RunningApp) -> Date?
+    ) -> [RunningApp] {
+        let keyed = apps.map { (app: $0, used: lastUsed($0)) }
+        return keyed.sorted { a, b in
+            let aCurrent = a.app.bundleID == currentBundleID
+            let bCurrent = b.app.bundleID == currentBundleID
+            if aCurrent != bCurrent { return aCurrent }
+            switch (a.used, b.used) {
+            case let (x?, y?) where x != y:
+                return x > y
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            default:
+                return a.app.name.localizedStandardCompare(b.app.name) == .orderedAscending
+            }
+        }.map(\.app)
+    }
 }

@@ -175,6 +175,14 @@ struct PanelView: View {
         }
     }
 
+    private var runningAppsByRecentUse: [RunningApp] {
+        RunningAppList.sortedByRecentUse(
+            runningApps.apps,
+            currentBundleID: frontmostApp.current?.bundleID,
+            lastUsed: usage.lastUsed
+        )
+    }
+
     private var runningAppsSection: some View {
         Group {
             sectionHeader("正在运行", detail: "\(runningApps.apps.count) 个", section: .running)
@@ -190,7 +198,7 @@ struct PanelView: View {
                             .font(.callout)
                             .foregroundStyle(.tertiary)
                     } else {
-                        appList(runningApps.apps) { app in
+                        appList(runningAppsByRecentUse) { app in
                             HoverRow { isHovered in
                                 HStack(spacing: 8) {
                                     // 勾选框放在最左边：右边缘会被滚动条盖住
