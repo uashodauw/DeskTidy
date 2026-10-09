@@ -182,7 +182,7 @@ private struct OutsideOf: Shape {
 }
 
 /// 无边框窗口默认不能接收键盘输入，录快捷键、按 Esc 都需要它。
-private final class KeyablePanel: NSPanel {
+final class KeyablePanel: NSPanel {
     var onCancel: (() -> Void)?
 
     override var canBecomeKey: Bool { true }

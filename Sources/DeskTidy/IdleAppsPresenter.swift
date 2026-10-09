@@ -17,6 +17,8 @@ final class IdleAppsPresenter {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - size.width - 16, y: screen.maxY - size.height - 16))
         }
         panel.orderFrontRegardless()
+        // 透明窗口的阴影按内容形状生成，内容换了要重新算
+        panel.invalidateShadow()
     }
 
     func close() {
@@ -24,23 +26,19 @@ final class IdleAppsPresenter {
     }
 
     private func makePanel() -> NSPanel {
-        let panel = NSPanel(
+        // 无边框：带标题栏的窗口被点中后，系统会画出自己的边框和标题栏底色，和玻璃圆角对不上
+        let panel = KeyablePanel(
             contentRect: .zero,
-            styleMask: [.titled, .closable, .nonactivatingPanel, .fullSizeContentView],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true
         )
+        panel.onCancel = { [weak self] in self?.close() }
         panel.title = "这些应用很久没用了"
-        // 窗口本身完全透明，背景和关闭按钮都画在内容的玻璃里：
-        // 系统关闭按钮固定在窗口最角上，会落到圆角外面
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
+        panel.hasShadow = true
         panel.isMovableByWindowBackground = true
-        panel.standardWindowButton(.closeButton)?.isHidden = true
-        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.hidesOnDeactivate = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces]
