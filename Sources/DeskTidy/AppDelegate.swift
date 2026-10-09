@@ -28,7 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) },
-            onOpen: { [weak self] app in self?.performOpen(app) }
+            onOpen: { [weak self] app in self?.performOpen(app) },
+            onQuit: { [weak self] app in self?.cleanup.politelyQuit([app]) }
         ))
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)

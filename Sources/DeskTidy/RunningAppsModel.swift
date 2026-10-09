@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import DeskTidyCore
 
 final class RunningAppsModel: ObservableObject {
@@ -7,6 +8,21 @@ final class RunningAppsModel: ObservableObject {
     /// 面板每次重画都要图标；每次都向系统取原图（很大）会让面板发卡，所以缩小后存起来。
     private var iconCache: [String: NSImage] = [:]
     private let iconSize = NSSize(width: 36, height: 36)
+    private var observers: [NSObjectProtocol] = []
+
+    init() {
+        // 应用打开或退出时自动更新列表：在面板里退出应用后，那一行要自己消失
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                withAnimation(TidyMotion.layout) { self?.refresh() }
+            })
+        }
+    }
+
+    deinit {
+        observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+    }
 
     func refresh() {
         let candidates = NSWorkspace.shared.runningApplications.compactMap { RunningApp($0) }

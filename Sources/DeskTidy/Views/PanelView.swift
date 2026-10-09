@@ -14,6 +14,7 @@ struct PanelView: View {
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
     let onOpen: (RunningApp) -> Void
+    let onQuit: (RunningApp) -> Void
 
     private enum Area {
         case hidden, running, settings
@@ -21,6 +22,10 @@ struct PanelView: View {
 
     /// 一次只展开一个，面板才不会被拉得很长。默认全部收起。
     @State private var expanded: Area?
+    /// 已经请求退出、还没真正退出的应用（可能正在问用户要不要保存）
+    @State private var quittingIDs: Set<String> = []
+    /// 用户在"是否保存"里点了取消时，应用不会退出；过这么久就恢复正常显示
+    private let quittingTimeout: TimeInterval = 4
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 156
@@ -151,7 +156,7 @@ struct PanelView: View {
                         Button {
                             onBringBack(app)
                         } label: {
-                            HoverRow {
+                            HoverRow { _ in
                                 HStack(spacing: 8) {
                                     appIcon(app)
                                     Text(app.name)
@@ -186,7 +191,7 @@ struct PanelView: View {
                             .foregroundStyle(.tertiary)
                     } else {
                         appList(runningApps.apps) { app in
-                            HoverRow {
+                            HoverRow { isHovered in
                                 HStack(spacing: 8) {
                                     // 勾选框放在最左边：右边缘会被滚动条盖住
                                     if scenes.selectedScene != nil {
@@ -199,11 +204,7 @@ struct PanelView: View {
                                     Text(app.name)
                                         .lineLimit(1)
                                     Spacer()
-                                    if let lastUsed = lastUsedText(for: app) {
-                                        Text(lastUsed)
-                                            .font(.caption)
-                                            .foregroundStyle(.tertiary)
-                                    }
+                                    runningRowTrailing(app, isHovered: isHovered)
                                 }
                             }
                             // 只认双击：勾选框自己会接住单击，单击行的其他地方什么都不做，也不会误打开
@@ -214,6 +215,43 @@ struct PanelView: View {
                 }
                 .transition(sectionTransition)
             }
+        }
+    }
+
+    /// 行的右边：平时显示上次使用时间；鼠标移上来换成退出按钮；请求退出后显示"退出中…"。
+    /// 退出按钮只在悬停时出现，避免随手一点就把应用关了。
+    @ViewBuilder
+    private func runningRowTrailing(_ app: RunningApp, isHovered: Bool) -> some View {
+        if quittingIDs.contains(app.bundleID) {
+            Text("退出中…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .transition(.opacity)
+        } else if isHovered && QuitRules.canQuitFromPanel(app) {
+            Button {
+                requestQuit(app)
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help("退出 \(app.name)（有没保存的内容会先问你）")
+            .transition(.opacity.combined(with: .scale(scale: 0.8)))
+        } else if let lastUsed = lastUsedText(for: app) {
+            Text(lastUsed)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .transition(.opacity)
+        }
+    }
+
+    private func requestQuit(_ app: RunningApp) {
+        withAnimation(TidyMotion.color) { _ = quittingIDs.insert(app.bundleID) }
+        onQuit(app)
+        DispatchQueue.main.asyncAfter(deadline: .now() + quittingTimeout) {
+            withAnimation(TidyMotion.color) { _ = quittingIDs.remove(app.bundleID) }
         }
     }
 
@@ -319,20 +357,21 @@ struct PanelView: View {
 
     private var runningAppsHint: String {
         if let scene = scenes.selectedScene {
-            return "双击打开应用；打勾 = 在「\(scene.name)」中保留；右边是上次使用时间"
+            return "双击打开，悬停点 ✕ 退出应用；打勾 = 在「\(scene.name)」中保留"
         }
-        return "双击打开应用；选一个场景才能勾选保留；右边是上次使用时间"
+        return "双击打开，悬停点 ✕ 退出应用；选一个场景才能勾选保留"
     }
 }
 
 /// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
+/// 把"鼠标在不在这一行上"交给内容，内容可以据此显示额外的按钮（比如退出）。
 private struct HoverRow<Content: View>: View {
-    @ViewBuilder let content: Content
+    @ViewBuilder let content: (Bool) -> Content
 
     @State private var isHovered = false
 
     var body: some View {
-        content
+        content(isHovered)
             .padding(.horizontal, 4)
             .frame(maxHeight: .infinity)
             .background(
