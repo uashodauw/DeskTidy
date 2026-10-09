@@ -17,8 +17,11 @@ struct IdleAppsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("这些应用很久没用了")
-                .font(.headline)
+            HStack(spacing: 8) {
+                WindowCloseButton(action: onDismiss)
+                Text("这些应用很久没用了")
+                    .font(.headline)
+            }
             Text("超过 \(threshold.shortLabel)没用过。勾选想退出的应用，有没保存的内容时它会先问你。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -67,12 +70,7 @@ struct IdleAppsView: View {
             }
         }
         .padding(16)
-        .padding(.top, 14)
         .frame(width: 300)
-        .overlay(alignment: .topLeading) {
-            WindowCloseButton(action: onDismiss)
-                .padding(14)
-        }
         .tidyWindowGlass(cornerRadius: 18)
     }
 
