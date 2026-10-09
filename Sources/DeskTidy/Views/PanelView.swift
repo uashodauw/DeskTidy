@@ -302,6 +302,14 @@ struct PanelView: View {
                         KeyboardShortcuts.Recorder(for: .cleanDesktop)
                             .controlSize(.small)
                     }
+
+                    HStack {
+                        Text("打开面板快捷键")
+                            .font(.callout)
+                        Spacer()
+                        KeyboardShortcuts.Recorder(for: .togglePanel)
+                            .controlSize(.small)
+                    }
                 }
                 .padding(.vertical, 4)
                 .transition(sectionTransition)

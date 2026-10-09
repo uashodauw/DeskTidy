@@ -45,6 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         KeyboardShortcuts.onKeyUp(for: .cleanDesktop) { [weak self] in
             self?.performClean()
         }
+        KeyboardShortcuts.onKeyUp(for: .togglePanel) { [weak self] in
+            self?.togglePanel()
+        }
 
         print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里的星星图标。")
 
