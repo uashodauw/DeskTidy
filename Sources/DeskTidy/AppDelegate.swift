@@ -27,7 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             usage: usage,
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
-            onBringBack: { [weak self] app in self?.performBringBack(app) }
+            onBringBack: { [weak self] app in self?.performBringBack(app) },
+            onOpen: { [weak self] app in self?.performOpen(app) }
         ))
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -101,6 +102,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func performRestore() {
         panel?.close()
         cleanup.restore()
+    }
+
+    private func performOpen(_ app: RunningApp) {
+        panel?.close()
+        cleanup.open(app)
     }
 
     private func performBringBack(_ app: RunningApp) {

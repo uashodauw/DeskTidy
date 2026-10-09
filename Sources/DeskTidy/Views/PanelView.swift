@@ -13,6 +13,7 @@ struct PanelView: View {
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
+    let onOpen: (RunningApp) -> Void
 
     private enum Area {
         case hidden, running, settings
@@ -150,15 +151,16 @@ struct PanelView: View {
                         Button {
                             onBringBack(app)
                         } label: {
-                            HStack(spacing: 8) {
-                                appIcon(app)
-                                Text(app.name)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "arrow.up.forward.app")
-                                    .foregroundStyle(.secondary)
+                            HoverRow {
+                                HStack(spacing: 8) {
+                                    appIcon(app)
+                                    Text(app.name)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.forward.app")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
-                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -184,25 +186,29 @@ struct PanelView: View {
                             .foregroundStyle(.tertiary)
                     } else {
                         appList(runningApps.apps) { app in
-                            HStack(spacing: 8) {
-                                // 勾选框放在最左边：右边缘会被滚动条盖住
-                                if scenes.selectedScene != nil {
-                                    Toggle("在当前场景中保留", isOn: keptBinding(for: app))
-                                        .toggleStyle(.checkbox)
-                                        .labelsHidden()
-                                        .transition(.opacity)
-                                }
-                                appIcon(app)
-                                Text(app.name)
-                                    .lineLimit(1)
-                                Spacer()
-                                if let lastUsed = lastUsedText(for: app) {
-                                    Text(lastUsed)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                        .help("上次使用时间")
+                            HoverRow {
+                                HStack(spacing: 8) {
+                                    // 勾选框放在最左边：右边缘会被滚动条盖住
+                                    if scenes.selectedScene != nil {
+                                        Toggle("在当前场景中保留", isOn: keptBinding(for: app))
+                                            .toggleStyle(.checkbox)
+                                            .labelsHidden()
+                                            .transition(.opacity)
+                                    }
+                                    appIcon(app)
+                                    Text(app.name)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    if let lastUsed = lastUsedText(for: app) {
+                                        Text(lastUsed)
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
                                 }
                             }
+                            // 只认双击：勾选框自己会接住单击，单击行的其他地方什么都不做，也不会误打开
+                            .onTapGesture(count: 2) { onOpen(app) }
+                            .help("双击打开 \(app.name)")
                         }
                     }
                 }
@@ -313,9 +319,30 @@ struct PanelView: View {
 
     private var runningAppsHint: String {
         if let scene = scenes.selectedScene {
-            return "打勾 = 在「\(scene.name)」场景中保留；右边是上次使用时间"
+            return "双击打开应用；打勾 = 在「\(scene.name)」中保留；右边是上次使用时间"
         }
-        return "选一个场景，才能勾选要保留的应用；右边是上次使用时间"
+        return "双击打开应用；选一个场景才能勾选保留；右边是上次使用时间"
+    }
+}
+
+/// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
+private struct HoverRow<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    @State private var isHovered = false
+
+    var body: some View {
+        content
+            .padding(.horizontal, 4)
+            .frame(maxHeight: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(isHovered ? 0.07 : 0))
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                withAnimation(TidyMotion.color) { isHovered = hovering }
+            }
     }
 }
 

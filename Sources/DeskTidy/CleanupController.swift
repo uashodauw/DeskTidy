@@ -47,6 +47,21 @@ final class CleanupController: ObservableObject {
         record.remove(bundleID: app.bundleID)
     }
 
+    /// 和点 Dock 图标一样：被收起的先放出来；窗口全关了的应用（比如没开窗口的 Safari）会新开一个窗口。
+    /// 只用 activate() 做不到后一点，所以通过"打开应用"让系统发出重新打开的请求。
+    func open(_ app: RunningApp) {
+        let runningApp = NSRunningApplication(processIdentifier: app.processID)
+        runningApp?.unhide()
+        record.remove(bundleID: app.bundleID)
+        guard let bundleURL = runningApp?.bundleURL else {
+            runningApp?.activate(options: [])
+            return
+        }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration)
+    }
+
     /// 只用普通退出，绝不能改成 forceTerminate：普通退出时，有没保存内容的应用会先问用户要不要保存。
     /// 退出前先取消隐藏，否则"是否保存"的询问会出现在看不见的窗口上。
     func politelyQuit(_ apps: [RunningApp]) {
