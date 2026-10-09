@@ -32,11 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onQuit: { [weak self] app in self?.cleanup.politelyQuit([app]) }
         ))
 
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // 只放图标不放文字：菜单栏放不下时，新装应用的图标最先被系统藏起来，越窄越不容易被挤掉
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
             button.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: AppInfo.displayName)
-            button.title = " 清理"
-            button.imagePosition = .imageLeading
+            button.toolTip = "\(AppInfo.displayName)（\(AppInfo.brandName)）"
             button.target = self
             button.action = #selector(togglePanel)
         }
@@ -46,7 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.performClean()
         }
 
-        print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里写着「清理」的图标。")
+        print("\(AppInfo.displayName) \(AppInfo.version) 已启动，请看屏幕右上角菜单栏里的星星图标。")
 
         if scenes.recoveredFromCorruptData || settings.recoveredFromCorruptData {
             // 等菜单栏图标先出来，再弹提示
