@@ -31,12 +31,14 @@ final class IdleAppsPresenter {
             defer: true
         )
         panel.title = "这些应用很久没用了"
-        // 窗口本身透明，只留左上角的关闭按钮，背景交给内容里的玻璃
+        // 窗口本身完全透明，背景和关闭按钮都画在内容的玻璃里：
+        // 系统关闭按钮固定在窗口最角上，会落到圆角外面
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.isMovableByWindowBackground = true
+        panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
         panel.hidesOnDeactivate = false

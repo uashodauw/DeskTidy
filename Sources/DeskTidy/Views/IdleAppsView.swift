@@ -67,9 +67,12 @@ struct IdleAppsView: View {
             }
         }
         .padding(16)
-        // 给窗口左上角的关闭按钮留位置
         .padding(.top, 14)
         .frame(width: 300)
+        .overlay(alignment: .topLeading) {
+            WindowCloseButton(action: onDismiss)
+                .padding(14)
+        }
         .tidyWindowGlass(cornerRadius: 18)
     }
 
@@ -83,5 +86,33 @@ struct IdleAppsView: View {
             get: { selection.isSelected(app) },
             set: { selection.setSelected(app, $0) }
         )
+    }
+}
+
+/// 仿 macOS 窗口左上角的红色关闭按钮，悬停时显示 ×
+private struct WindowCloseButton: View {
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(Color(red: 1.0, green: 0.37, blue: 0.34))
+                .overlay(Circle().stroke(Color.black.opacity(0.12), lineWidth: 0.5))
+                .overlay {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 6.5, weight: .heavy))
+                        .foregroundStyle(Color.black.opacity(0.55))
+                        .opacity(isHovered ? 1 : 0)
+                }
+                .frame(width: 12, height: 12)
+                .contentShape(Circle().inset(by: -4))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(TidyMotion.color) { isHovered = hovering }
+        }
+        .help("关闭")
+        .accessibilityLabel("关闭")
     }
 }
