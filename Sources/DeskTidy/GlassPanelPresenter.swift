@@ -146,7 +146,7 @@ private struct PanelContainer<Content: View>: View {
 }
 
 /// 只在面板边缘外面画阴影，不画在面板里面：玻璃是半透明的，里面有阴影会把整块玻璃弄脏。
-private struct PanelShadow: View {
+struct PanelShadow: View {
     let cornerRadius: CGFloat
 
     /// 两层阴影叠加，和 iOS 浮层的做法一样：
