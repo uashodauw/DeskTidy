@@ -56,4 +56,5 @@ fi
 echo ""
 echo "完成：$DMG"
 echo "支持的芯片：$(lipo -archs "$APP/Contents/MacOS/DeskTidy")"
-echo "把这个文件发给别人即可。"
+echo "把这个文件发给别人即可。已在访达里为你打开它所在的文件夹。"
+open -R "$DMG"
