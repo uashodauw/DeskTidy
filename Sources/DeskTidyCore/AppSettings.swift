@@ -8,6 +8,7 @@ public final class AppSettings {
     static let idleReminderFrequencyKey = "idleReminderFrequency"
     static let idleReminderLastShownKey = "idleReminderLastShown"
     static let cleanSoundKey = "cleanSound"
+    static let welcomeShownKey = "welcomeShown"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -34,6 +35,16 @@ public final class AppSettings {
         if let value = defaults.object(forKey: Self.idleReminderLastShownKey), value as? Double == nil {
             defaults.removeObject(forKey: Self.idleReminderLastShownKey)
         }
+        // 同理：坏了最多再显示一次欢迎窗口
+        if let value = defaults.object(forKey: Self.welcomeShownKey), value as? Bool == nil {
+            defaults.removeObject(forKey: Self.welcomeShownKey)
+        }
+    }
+
+    /// 第一次打开时的欢迎窗口是否已经显示过。只显示一次。
+    public var welcomeShown: Bool {
+        get { defaults.object(forKey: Self.welcomeShownKey) as? Bool ?? false }
+        set { defaults.set(newValue, forKey: Self.welcomeShownKey) }
     }
 
     /// 清理时是否播放提示音。没设置过时默认打开。

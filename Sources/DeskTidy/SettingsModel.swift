@@ -57,6 +57,11 @@ final class SettingsModel: ObservableObject {
         settings.idleReminderLastShown = Date()
     }
 
+    var welcomeShown: Bool {
+        get { settings.welcomeShown }
+        set { settings.welcomeShown = newValue }
+    }
+
     func playCleanSoundIfEnabled() {
         guard soundEnabled else { return }
         playCleanSound()

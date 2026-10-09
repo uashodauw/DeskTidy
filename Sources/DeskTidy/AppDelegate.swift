@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let toast = ToastPresenter()
     private let settings = SettingsModel()
     private let usage = UsageModel()
-    private let idleApps = IdleAppsPresenter()
+    private let idleApps = GlassWindowPresenter(placement: .topRight)
+    private let welcome = GlassWindowPresenter(placement: .center)
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -55,6 +56,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // 等菜单栏图标先出来，再弹提示
             DispatchQueue.main.async { [weak self] in self?.showRecoveredNotice() }
         }
+        if !settings.welcomeShown {
+            DispatchQueue.main.async { [weak self] in self?.showWelcome() }
+        }
+    }
+
+    private func showWelcome() {
+        settings.welcomeShown = true
+        welcome.show(WelcomeView(
+            onOpenPanel: { [weak self] in
+                self?.welcome.close()
+                self?.showPanel()
+            },
+            onDismiss: { [weak self] in self?.welcome.close() }
+        ))
     }
 
     private func showRecoveredNotice() {

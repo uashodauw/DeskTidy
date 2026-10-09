@@ -32,6 +32,22 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(AppSettings(defaults: defaults).soundEnabled)
     }
 
+    func testWelcomeIsNotShownYetOnFreshInstall() {
+        XCTAssertFalse(AppSettings(defaults: defaults).welcomeShown)
+    }
+
+    func testWelcomeShownIsRemembered() {
+        AppSettings(defaults: defaults).welcomeShown = true
+        XCTAssertTrue(AppSettings(defaults: defaults).welcomeShown)
+    }
+
+    func testBrokenWelcomeFlagIsDroppedSilently() {
+        defaults.set("yes", forKey: AppSettings.welcomeShownKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertFalse(settings.welcomeShown)
+        XCTAssertFalse(settings.recoveredFromCorruptData)
+    }
+
     func testCleanSoundIsMailSentByDefaultAndRemembered() {
         XCTAssertEqual(AppSettings(defaults: defaults).cleanSound, .mailSent)
         AppSettings(defaults: defaults).cleanSound = .glass
