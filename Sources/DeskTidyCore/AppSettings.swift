@@ -7,6 +7,7 @@ public final class AppSettings {
     static let idleThresholdKey = "idleThresholdSeconds"
     static let idleReminderFrequencyKey = "idleReminderFrequency"
     static let idleReminderLastShownKey = "idleReminderLastShown"
+    static let cleanSoundKey = "cleanSound"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -25,6 +26,10 @@ public final class AppSettings {
            (value as? String).flatMap(IdleReminderFrequency.init(rawValue:)) == nil {
             discard(Self.idleReminderFrequencyKey)
         }
+        if let value = defaults.object(forKey: Self.cleanSoundKey),
+           (value as? String).flatMap(CleanSound.init(rawValue:)) == nil {
+            discard(Self.cleanSoundKey)
+        }
         // 上次提醒时间坏了不值得打扰用户，悄悄删掉即可，最多就是多提醒一次
         if let value = defaults.object(forKey: Self.idleReminderLastShownKey), value as? Double == nil {
             defaults.removeObject(forKey: Self.idleReminderLastShownKey)
@@ -35,6 +40,14 @@ public final class AppSettings {
     public var soundEnabled: Bool {
         get { defaults.object(forKey: Self.soundEnabledKey) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Self.soundEnabledKey) }
+    }
+
+    /// 清理时播放哪个声音。没设置过时默认用 iPhone 发送邮件的"嗖"。
+    public var cleanSound: CleanSound {
+        get {
+            (defaults.object(forKey: Self.cleanSoundKey) as? String).flatMap(CleanSound.init(rawValue:)) ?? .defaultValue
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.cleanSoundKey) }
     }
 
     /// 多久没用算"很久"。没设置过或存的值不认识时用默认值 1 小时。

@@ -32,6 +32,19 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(AppSettings(defaults: defaults).soundEnabled)
     }
 
+    func testCleanSoundIsMailSentByDefaultAndRemembered() {
+        XCTAssertEqual(AppSettings(defaults: defaults).cleanSound, .mailSent)
+        AppSettings(defaults: defaults).cleanSound = .glass
+        XCTAssertEqual(AppSettings(defaults: defaults).cleanSound, .glass)
+    }
+
+    func testUnknownCleanSoundFallsBackToDefault() {
+        defaults.set("乱码", forKey: AppSettings.cleanSoundKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.cleanSound, .mailSent)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+    }
+
     func testIdleThresholdIsOneHourByDefault() {
         XCTAssertEqual(AppSettings(defaults: defaults).idleThreshold, .oneHour)
     }

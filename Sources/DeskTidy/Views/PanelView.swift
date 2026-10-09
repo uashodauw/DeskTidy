@@ -220,6 +220,16 @@ struct PanelView: View {
                         .toggleStyle(.switch)
                         .controlSize(.small)
 
+                    if settings.soundEnabled && !settings.availableCleanSounds.isEmpty {
+                        settingPicker(
+                            "提示音（选中即试听）",
+                            selection: $settings.cleanSound,
+                            options: settings.availableCleanSounds,
+                            label: \.label
+                        )
+                        .transition(.opacity)
+                    }
+
                     settingPicker("多久没用算很久", selection: $settings.idleThreshold, options: IdleThreshold.allCases, label: \.label)
 
                     settingPicker(
