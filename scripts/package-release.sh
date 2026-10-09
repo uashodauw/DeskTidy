@@ -1,5 +1,5 @@
 #!/bin/bash
-# 做成可以直接发给别人的安装文件 build/DeskTidy-<版本>.dmg（苹果芯片和 Intel 芯片的 Mac 都能用）。
+# 做成可以直接发给别人的安装文件 build/DeskTidy（测试版）.dmg，里面有应用和安装说明（苹果芯片和 Intel 芯片的 Mac 都能用）。
 #
 # 没有苹果开发者账号时：用免费的临时签名。对方第一次打开要在"系统设置 > 隐私与安全性"里点一次"仍要打开"，
 #   安装包里附了图文说明。
@@ -28,7 +28,8 @@ else
 fi
 codesign --verify --strict --deep "$APP"
 
-DMG="build/DeskTidy-$VERSION.dmg"
+RELEASE_NAME="DeskTidy（测试版）"
+DMG="build/$RELEASE_NAME.dmg"
 STAGING="build/dmg"
 rm -rf "$STAGING" "$DMG"
 mkdir -p "$STAGING"
@@ -39,7 +40,7 @@ if [ -z "$DEVELOPER_ID" ]; then
 fi
 
 echo "正在制作安装文件..."
-hdiutil create -volname "DeskTidy" -srcfolder "$STAGING" -ov -format UDZO "$DMG" >/dev/null
+hdiutil create -volname "$RELEASE_NAME" -srcfolder "$STAGING" -ov -format UDZO "$DMG" >/dev/null
 rm -rf "$STAGING"
 
 if [ -n "$DEVELOPER_ID" ]; then
