@@ -50,10 +50,16 @@ final class GlassPanelPresenter: NSObject {
         host.sizingOptions = []
         panel.contentView = host
 
-        // 用户切到别的应用（比如 Command + Tab）时收起，和系统弹出框的习惯一致
+        // 用户切到别的应用（比如 Command + Tab）时收起，和系统弹出框的习惯一致。
+        // 本应用自己被激活（用户在"应用程序"里再次打开 DeskTidy）时不收起：那正是要打开面板
+        let ownProcessID = ProcessInfo.processInfo.processIdentifier
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
-        ) { [weak self] _ in self?.close() }
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard app?.processIdentifier != ownProcessID else { return }
+            self?.close()
+        }
     }
 
     deinit {
@@ -65,11 +71,35 @@ final class GlassPanelPresenter: NSObject {
 
     /// 像 iOS 一样从菜单栏轻轻落下并淡入，最后带一点点回弹。
     /// 动画做在整个窗口上而不是 SwiftUI 里：老系统的毛玻璃是系统直接画的，SwiftUI 的缩放和透明度管不到它。
-    func show(below button: NSStatusBarButton) {
-        guard let buttonWindow = button.window else { return }
+    /// 菜单栏图标看得见就落在图标下面；图标被挤掉了（菜单栏太满、藏在刘海后面）就落在屏幕右上角。
+    func show(near button: NSStatusBarButton?) {
+        if let button, let anchor = Self.visibleAnchor(of: button) {
+            present(below: anchor)
+        } else {
+            let screen = NSScreen.main ?? NSScreen.screens.first
+            let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            let x = visible.maxX - Self.screenEdgeInset - Self.panelWidth / 2
+            present(below: NSRect(x: x, y: visible.maxY, width: 1, height: 1))
+        }
+    }
+
+    private static let screenEdgeInset: CGFloat = 16
+
+    /// 系统藏起图标时不会告诉应用，只能看图标窗口还在不在屏幕上、有没有被刘海挡住
+    private static func visibleAnchor(of button: NSStatusBarButton) -> NSRect? {
+        guard let window = button.window, window.isVisible, window.occlusionState.contains(.visible) else { return nil }
+        let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
+        guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return nil }
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea,
+           anchor.midX > left.maxX, anchor.midX < right.minX {
+            return nil
+        }
+        return anchor
+    }
+
+    private func present(below anchor: NSRect) {
         generation += 1
         isShown = true
-        let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
         let finalFrame = frame(below: anchor)
 
         panel.setFrame(finalFrame.offsetBy(dx: 0, dy: dropDistance), display: false)
@@ -91,6 +121,10 @@ final class GlassPanelPresenter: NSObject {
         let current = generation
         isShown = false
         removeClickOutsideMonitor()
+        // 从"应用程序"里打开面板时本应用被激活了；收起后把键盘焦点还给用户原来的应用
+        if NSApp.isActive {
+            NSApp.deactivate()
+        }
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.12
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
@@ -104,7 +138,7 @@ final class GlassPanelPresenter: NSObject {
     /// 面板顶边在菜单栏下面 6 点；窗口四周再留出阴影的位置。
     /// 窗口上沿会伸进菜单栏一点，那部分是透明的，点击会直接穿过去，不影响点菜单栏。
     private func frame(below anchor: NSRect) -> NSRect {
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main
+        let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.minY)) } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let margin = Self.shadowMargin
         let width = Self.panelWidth + margin * 2

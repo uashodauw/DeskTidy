@@ -116,14 +116,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePanel() {
-        guard let button = statusItem?.button else { return }
         guard let panel else { return }
         if panel.isShown {
             panel.close()
         } else {
-            runningApps.refresh()
-            usage.noteSeen(runningApps.apps)
-            panel.show(below: button)
+            showPanel()
         }
+    }
+
+    private func showPanel() {
+        guard let panel, !panel.isShown else { return }
+        runningApps.refresh()
+        usage.noteSeen(runningApps.apps)
+        panel.show(near: statusItem?.button)
+    }
+
+    /// 已经在运行时，用户又在"应用程序"、启动台或聚焦搜索里打开 DeskTidy：多半是找不到菜单栏图标了
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPanel()
+        return false
     }
 }
