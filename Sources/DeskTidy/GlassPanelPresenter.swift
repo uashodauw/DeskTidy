@@ -12,8 +12,10 @@ import SwiftUI
 final class GlassPanelPresenter: NSObject {
     static let panelWidth: CGFloat = 260
     static let cornerRadius: CGFloat = 18
-    /// 面板四周留给阴影的空间
-    static let shadowMargin: CGFloat = 24
+    /// 面板左右和下方留给阴影的空间。必须比阴影扩散的范围大，否则阴影会被窗口边缘切出一条硬直线。
+    static let shadowMargin: CGFloat = 56
+    /// 面板上方留给阴影的空间（阴影主要往下落，上面用不了那么多）
+    static let shadowTopMargin: CGFloat = 20
 
     private let panel: KeyablePanel
     private var clickOutsideMonitor: Any?
@@ -99,14 +101,15 @@ final class GlassPanelPresenter: NSObject {
         })
     }
 
-    /// 窗口顶边就是面板顶边；左右和下面留出阴影的位置。
+    /// 面板顶边在菜单栏下面 6 点；窗口四周再留出阴影的位置。
+    /// 窗口上沿会伸进菜单栏一点，那部分是透明的，点击会直接穿过去，不影响点菜单栏。
     private func frame(below anchor: NSRect) -> NSRect {
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main
         let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let margin = Self.shadowMargin
         let width = Self.panelWidth + margin * 2
-        let top = anchor.minY - 6
-        let height = min(maxHeight, top - visible.minY)
+        let top = anchor.minY - 6 + Self.shadowTopMargin
+        let height = min(maxHeight + Self.shadowTopMargin, top - visible.minY)
         var x = anchor.midX - width / 2
         x = min(max(x, visible.minX - margin + 8), visible.maxX - width + margin - 8)
         return NSRect(x: x, y: top - height, width: width, height: height)
@@ -137,6 +140,7 @@ private struct PanelContainer<Content: View>: View {
             .frame(width: GlassPanelPresenter.panelWidth)
             .background { PanelShadow(cornerRadius: GlassPanelPresenter.cornerRadius) }
             .padding(.horizontal, GlassPanelPresenter.shadowMargin)
+            .padding(.top, GlassPanelPresenter.shadowTopMargin)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
@@ -145,20 +149,34 @@ private struct PanelContainer<Content: View>: View {
 private struct PanelShadow: View {
     let cornerRadius: CGFloat
 
+    /// 两层阴影叠加，和 iOS 浮层的做法一样：
+    /// 大而淡的一层往下扩散，表现"浮在空中"；贴边很淡的一层，让边缘有轮廓但不会出现一圈黑线。
     var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
-            .fill(Color.black)
-            .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
-            .mask(OutsideOf(cornerRadius: cornerRadius).fill(style: FillStyle(eoFill: true)))
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
+        ZStack {
+            shape
+                .fill(Color.black)
+                .shadow(color: .black.opacity(0.12), radius: 20, y: 12)
+            shape
+                .fill(Color.black)
+                .shadow(color: .black.opacity(0.07), radius: 3, y: 1)
+        }
+        .mask(OutsideOf(cornerRadius: cornerRadius).fill(style: FillStyle(eoFill: true)))
     }
 }
 
+/// 面板外面的区域。挖掉的洞比面板大 1 点：洞和面板一样大时，抗锯齿会在边缘留下一道细黑线。
 private struct OutsideOf: Shape {
     let cornerRadius: CGFloat
 
     func path(in rect: CGRect) -> Path {
-        var path = Path(rect.insetBy(dx: -GlassPanelPresenter.shadowMargin * 2, dy: -GlassPanelPresenter.shadowMargin * 2))
-        path.addRoundedRect(in: rect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius), style: .circular)
+        let reach = GlassPanelPresenter.shadowMargin * 2
+        var path = Path(rect.insetBy(dx: -reach, dy: -reach))
+        path.addRoundedRect(
+            in: rect.insetBy(dx: -1, dy: -1),
+            cornerSize: CGSize(width: cornerRadius + 1, height: cornerRadius + 1),
+            style: .circular
+        )
         return path
     }
 }

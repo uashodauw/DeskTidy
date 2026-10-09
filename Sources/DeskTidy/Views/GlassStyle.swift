@@ -37,8 +37,17 @@ extension View {
     private func behindWindowGlass(in shape: RoundedRectangle) -> some View {
         background {
             BehindWindowBlur(cornerRadius: shape.cornerSize.width)
-                .overlay(shape.stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                .overlay(shape.strokeBorder(Self.glassEdge, lineWidth: 0.5))
         }
+    }
+
+    /// 玻璃边缘的高光：顶部亮、往下逐渐淡掉，像光从上面照下来。整圈一样亮会显得像一道生硬的边框。
+    private static var glassEdge: LinearGradient {
+        LinearGradient(
+            colors: [Color.white.opacity(0.45), Color.white.opacity(0.12), Color.white.opacity(0.05)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     private func frostedGlass<S: Shape>(in shape: S, tint: Color?) -> some View {
@@ -48,7 +57,7 @@ extension View {
                 if let tint {
                     shape.fill(tint)
                 }
-                shape.stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+                shape.stroke(Self.glassEdge, lineWidth: 0.5)
             }
         }
     }
