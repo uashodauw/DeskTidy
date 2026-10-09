@@ -79,6 +79,44 @@ public final class SceneStore {
         save()
     }
 
+    public var canAddScene: Bool { scenes.count < SceneEditing.maxScenes }
+    /// 至少留一个场景
+    public var canDeleteScene: Bool { scenes.count > 1 }
+
+    /// 新建一个空场景（保留名单为空），返回它；名字不合格或场景已满时返回 nil。
+    @discardableResult
+    public func addScene(named name: String) -> WorkScene? {
+        guard canAddScene, SceneEditing.problem(with: name, among: scenes) == nil else { return nil }
+        let scene = WorkScene(id: "custom-\(UUID().uuidString)", name: SceneEditing.cleaned(name), keptBundleIDs: [])
+        scenes.append(scene)
+        save()
+        return scene
+    }
+
+    @discardableResult
+    public func renameScene(id: String, to name: String) -> Bool {
+        guard
+            let index = scenes.firstIndex(where: { $0.id == id }),
+            SceneEditing.problem(with: name, among: scenes, renamingID: id) == nil
+        else { return false }
+        scenes[index].name = SceneEditing.cleaned(name)
+        save()
+        return true
+    }
+
+    /// 删掉正在用的场景时，切到无场景模式，而不是悄悄换成另一个场景。
+    @discardableResult
+    public func deleteScene(id: String) -> Bool {
+        guard canDeleteScene, scenes.contains(where: { $0.id == id }) else { return false }
+        let wasSelected = selectedScene?.id == id
+        scenes.removeAll { $0.id == id }
+        save()
+        if wasSelected {
+            selectNoScene()
+        }
+        return true
+    }
+
     private func save() {
         let saved = SavedScenes(version: Self.currentVersion, scenes: scenes)
         if let data = try? JSONEncoder().encode(saved) {

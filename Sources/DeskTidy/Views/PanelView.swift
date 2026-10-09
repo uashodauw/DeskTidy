@@ -103,6 +103,8 @@ struct PanelView: View {
         .font(.callout)
     }
 
+    private let sceneColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
+
     private var scenePicker: some View {
         VStack(alignment: .leading, spacing: 6) {
             // 提示只占一行：行数一变，整个面板就会跟着变高变矮，看起来一跳一跳的
@@ -111,9 +113,9 @@ struct PanelView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .contentTransition(.opacity)
-            // 系统的分段选择器不能取消选中，所以用一排按钮
+            // 系统的分段选择器不能取消选中，所以用按钮；一行 3 个，自定义场景多了就排到第二行
             TidyGlassGroup(spacing: 4) {
-                HStack(spacing: 4) {
+                LazyVGrid(columns: sceneColumns, spacing: 4) {
                     ForEach(scenes.scenes) { scene in
                         Button(scene.name) {
                             withAnimation(TidyMotion.layout) { scenes.toggle(scene) }
@@ -268,6 +270,8 @@ struct PanelView: View {
             sectionHeader("设置", detail: "", section: .settings)
             if expanded == .settings {
                 VStack(alignment: .leading, spacing: 10) {
+                    SceneEditorView(scenes: scenes)
+
                     Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
                         .toggleStyle(.switch)
                         .controlSize(.small)

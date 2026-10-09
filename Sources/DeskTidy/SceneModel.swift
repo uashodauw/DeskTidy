@@ -46,4 +46,37 @@ final class SceneModel: ObservableObject {
         store.setApp(app.bundleID, kept: kept, inSceneID: selectedID)
         scenes = store.scenes
     }
+
+    // MARK: - 自定义场景
+
+    var canAddScene: Bool { store.canAddScene }
+    var canDeleteScene: Bool { store.canDeleteScene }
+
+    /// 新建后直接选中它：用户下一步就是去"正在运行"里勾要保留的应用。返回问题，成功时为 nil。
+    func addScene(named name: String) -> SceneEditing.NameProblem? {
+        if let problem = SceneEditing.problem(with: name, among: scenes) {
+            return problem
+        }
+        guard let scene = store.addScene(named: name) else { return nil }
+        scenes = store.scenes
+        selectedID = scene.id
+        return nil
+    }
+
+    func renameScene(_ scene: WorkScene, to name: String) -> SceneEditing.NameProblem? {
+        if let problem = SceneEditing.problem(with: name, among: scenes, renamingID: scene.id) {
+            return problem
+        }
+        store.renameScene(id: scene.id, to: name)
+        scenes = store.scenes
+        return nil
+    }
+
+    func deleteScene(_ scene: WorkScene) {
+        guard store.deleteScene(id: scene.id) else { return }
+        scenes = store.scenes
+        if selectedID == scene.id {
+            selectedID = nil
+        }
+    }
 }
