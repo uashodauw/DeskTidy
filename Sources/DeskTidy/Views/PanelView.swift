@@ -259,7 +259,7 @@ struct PanelView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(ListInk.secondary)
+                            .foregroundStyle(.secondary)
                             .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
@@ -411,7 +411,6 @@ private enum ListInk {
     static let primary = Color(nsColor: .labelColor)
     static let secondary = Color(nsColor: .secondaryLabelColor)
     static let tertiary = Color(nsColor: .tertiaryLabelColor)
-    static let highlight = Color(nsColor: .labelColor).opacity(0.08)
 }
 
 /// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
@@ -459,9 +458,9 @@ private struct HoverRow<Content: View>: View {
             .padding(.horizontal, 4)
             .frame(maxHeight: .infinity)
             .background(
+                // 用会和玻璃混色的 .primary：换成固定颜色在玻璃上淡得几乎看不出来，用户感觉不到选中了
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(ListInk.highlight)
-                    .opacity(isHovered ? 1 : 0)
+                    .fill(Color.primary.opacity(isHovered ? 0.07 : 0))
             )
             .contentShape(Rectangle())
             .onHover { isHovered = $0 }
