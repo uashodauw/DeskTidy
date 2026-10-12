@@ -165,10 +165,9 @@ struct PanelView: View {
                                     appIcon(app)
                                     Text(app.name)
                                         .lineLimit(1)
-                                        .foregroundStyle(ListInk.primary)
                                     Spacer()
                                     Image(systemName: "arrow.up.forward.app")
-                                        .foregroundStyle(ListInk.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -216,7 +215,6 @@ struct PanelView: View {
                                     appIcon(app)
                                     Text(app.name)
                                         .lineLimit(1)
-                                        .foregroundStyle(ListInk.primary)
                                     Spacer()
                                     runningRowTrailing(app, isHovered: isHovered)
                                 }
@@ -242,7 +240,7 @@ struct PanelView: View {
         if quittingIDs.contains(app.bundleID) {
             Text("退出中…")
                 .font(.caption)
-                .foregroundStyle(ListInk.secondary)
+                .foregroundStyle(.secondary)
                 .transition(.opacity)
         } else {
             let showsQuit = isHovered && QuitRules.canQuitFromPanel(app)
@@ -250,7 +248,7 @@ struct PanelView: View {
                 if let lastUsed = lastUsedText(for: app) {
                     Text(lastUsed)
                         .font(.caption)
-                        .foregroundStyle(ListInk.tertiary)
+                        .foregroundStyle(.tertiary)
                         .opacity(showsQuit ? 0 : 1)
                 }
                 if QuitRules.canQuitFromPanel(app) {
@@ -403,14 +401,6 @@ struct PanelView: View {
         }
         return "双击打开，悬停点 ✕ 退出应用；选一个场景才能勾选保留"
     }
-}
-
-/// 滚动列表里的文字颜色。不用 .primary / .secondary 这类"层级"颜色：放在玻璃上时它们会和背后的桌面实时混色，
-/// 列表一滚动，每行文字每帧都要重新混色。固定的系统文字颜色看起来一样，也会跟着深色模式变，但不需要实时混色。
-private enum ListInk {
-    static let primary = Color(nsColor: .labelColor)
-    static let secondary = Color(nsColor: .secondaryLabelColor)
-    static let tertiary = Color(nsColor: .tertiaryLabelColor)
 }
 
 /// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
