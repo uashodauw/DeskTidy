@@ -40,6 +40,8 @@ struct SceneEditorView: View {
                             .onSubmit(add)
                             .disabled(!scenes.canAddScene)
                         Button("添加", action: add)
+                            .buttonStyle(TidyButtonStyle())
+                            .fixedSize()
                             .disabled(!scenes.canAddScene || SceneEditing.cleaned(newName).isEmpty)
                     }
                 }

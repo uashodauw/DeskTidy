@@ -41,14 +41,7 @@ extension View {
         }
     }
 
-    /// 玻璃边缘的高光：顶部亮、往下逐渐淡掉，像光从上面照下来。整圈一样亮会显得像一道生硬的边框。
-    private static var glassEdge: LinearGradient {
-        LinearGradient(
-            colors: [Color.white.opacity(0.45), Color.white.opacity(0.12), Color.white.opacity(0.05)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
+    private static var glassEdge: LinearGradient { TidyGlassEdge.gradient }
 
     private func frostedGlass<S: Shape>(in shape: S, tint: Color?) -> some View {
         background {
@@ -60,6 +53,17 @@ extension View {
                 shape.stroke(Self.glassEdge, lineWidth: 0.5)
             }
         }
+    }
+}
+
+/// 玻璃边缘的高光：顶部亮、往下逐渐淡掉，像光从上面照下来。整圈一样亮会显得像一道生硬的边框。
+enum TidyGlassEdge {
+    static var gradient: LinearGradient {
+        LinearGradient(
+            colors: [Color.white.opacity(0.45), Color.white.opacity(0.12), Color.white.opacity(0.05)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 }
 

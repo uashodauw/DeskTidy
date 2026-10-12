@@ -207,7 +207,7 @@ struct PanelShadow: View {
 }
 
 /// 面板外面的区域。挖掉的洞比面板大 1 点：洞和面板一样大时，抗锯齿会在边缘留下一道细黑线。
-private struct OutsideOf: Shape {
+struct OutsideOf: Shape {
     let cornerRadius: CGFloat
 
     func path(in rect: CGRect) -> Path {

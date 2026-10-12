@@ -39,14 +39,7 @@ struct SettingsGroup<Content: View>: View {
             VStack(spacing: 0) {
                 content
             }
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.primary.opacity(0.045))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
-            )
+            .background(SettingsCardGlass())
             if let footer {
                 Text(footer)
                     .font(.caption)
@@ -55,6 +48,21 @@ struct SettingsGroup<Content: View>: View {
                     .padding(.horizontal, 12)
             }
         }
+    }
+}
+
+/// 设置卡片的底：一层很淡的白色让卡片从窗口玻璃上浮起来，但依然透得出后面；
+/// 边缘用和窗口一样的高光（上亮下淡），不用一整圈灰线。
+/// 不再套一层系统玻璃：玻璃叠玻璃在 macOS 26 上会发灰、发闷，切换标签淡入淡出时还会闪。
+private struct SettingsCardGlass: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        shape
+            .fill(Color.white.opacity(colorScheme == .dark ? 0.07 : 0.38))
+            .overlay(shape.strokeBorder(TidyGlassEdge.gradient, lineWidth: 0.5))
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.12 : 0.05), radius: 3, y: 1)
     }
 }
 
@@ -123,6 +131,101 @@ struct SettingsMenu<Option: Hashable>: View {
         .pickerStyle(.menu)
         .labelsHidden()
         .fixedSize()
+    }
+}
+
+// MARK: - 窗口内容
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case scenes, clean, focus, shortcuts
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .scenes: return "场景"
+        case .clean: return "清理"
+        case .focus: return "专注"
+        case .shortcuts: return "快捷键"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .scenes: return "square.stack.3d.up"
+        case .clean: return "wand.and.stars"
+        case .focus: return "timer"
+        case .shortcuts: return "keyboard"
+        }
+    }
+}
+
+/// 设置窗口：左上角红色关闭按钮、标题，一排玻璃标签，下面是当前标签的内容。
+struct SettingsRootView: View {
+    @ObservedObject var scenes: SceneModel
+    @ObservedObject var settings: SettingsModel
+    let onClose: () -> Void
+
+    /// 记住上次看的标签，下次打开还在这里
+    @AppStorage("settingsTab") private var tab: SettingsTab = .scenes
+
+    /// 换标签：旧的一页淡出、新的一页从稍微靠下的位置淡入，玻璃同时伸缩到新的高度
+    private static let switchAnimation = Animation.easeInOut(duration: 0.26)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Text("设置")
+                    .font(.headline)
+                HStack {
+                    WindowCloseButton(action: onClose)
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+
+            TidyGlassGroup(spacing: 6) {
+                HStack(spacing: 6) {
+                    ForEach(SettingsTab.allCases) { item in
+                        Button {
+                            withAnimation(Self.switchAnimation) { tab = item }
+                        } label: {
+                            Label(item.title, systemImage: item.symbol)
+                        }
+                        .buttonStyle(TidyButtonStyle(isSelected: item == tab))
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+
+            ZStack(alignment: .top) {
+                ForEach(SettingsTab.allCases) { item in
+                    page(for: item)
+                        .opacity(item == tab ? 1 : 0)
+                        .offset(y: item == tab ? 0 : 8)
+                        // 没选中的页压成 0 高：玻璃只包住当前这一页
+                        .frame(height: item == tab ? nil : 0, alignment: .top)
+                        .clipped()
+                        .allowsHitTesting(item == tab)
+                        .accessibilityHidden(item != tab)
+                }
+            }
+        }
+        .frame(width: settingsPageWidth)
+        .tidyWindowGlass(cornerRadius: SettingsWindowController.cornerRadius)
+    }
+
+    /// 四页一直都在（只是看不见）：每次切换才新建的话，系统控件要晚一拍才画出来，看起来会闪
+    @ViewBuilder
+    private func page(for tab: SettingsTab) -> some View {
+        switch tab {
+        case .scenes: SceneSettingsPage(scenes: scenes)
+        case .clean: CleanSettingsPage(settings: settings)
+        case .focus: FocusSettingsPage(settings: settings)
+        case .shortcuts: ShortcutSettingsPage()
+        }
     }
 }
 

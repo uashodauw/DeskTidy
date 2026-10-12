@@ -88,7 +88,7 @@ struct IdleAppsView: View {
 }
 
 /// 仿 macOS 窗口左上角的红色关闭按钮，悬停时显示 ×
-private struct WindowCloseButton: View {
+struct WindowCloseButton: View {
     let action: () -> Void
     @State private var isHovered = false
 

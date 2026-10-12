@@ -91,7 +91,7 @@ Sources/
   DeskTidy/                应用本体：菜单栏图标、面板界面、启动设置
     main.swift             应用入口：启动应用，并设置不在 Dock 显示图标
     AppDelegate.swift      创建菜单栏图标，点击时弹出面板
-    SettingsWindowController.swift  设置窗口（场景、清理、专注、快捷键四个标签）
+    SettingsWindowController.swift  设置窗口（透明玻璃，场景、清理、专注、快捷键四个标签）
     Focus*.swift           番茄钟：计时、角落小时钟、什么时候提醒
     BreakOverlayPresenter.swift  休息时铺满屏幕的毛玻璃
     Views/                 界面
