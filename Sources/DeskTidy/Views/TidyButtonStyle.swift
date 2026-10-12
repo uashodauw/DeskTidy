@@ -44,7 +44,7 @@ private struct TidyButtonBody<Label: View>: View {
 
     var body: some View {
         label
-            .font(.body)
+            .font(isLarge ? .body.weight(.semibold) : .callout)
             .lineLimit(1)
             .frame(maxWidth: .infinity)
             .padding(.vertical, isLarge ? 8 : 5)

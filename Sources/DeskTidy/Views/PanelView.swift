@@ -43,6 +43,8 @@ struct PanelView: View {
                     .shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1)
                 Spacer()
                 Text("v\(AppInfo.version)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             currentAppRow
@@ -85,6 +87,7 @@ struct PanelView: View {
     private var currentAppRow: some View {
         HStack(spacing: 6) {
             Text("当前在用：")
+                .foregroundStyle(.secondary)
             if let app = frontmostApp.current {
                 if let icon = runningApps.icon(for: app) {
                     Image(nsImage: icon)
@@ -92,11 +95,14 @@ struct PanelView: View {
                         .frame(width: 16, height: 16)
                 }
                 Text(app.name)
+                    .fontWeight(.medium)
                     .lineLimit(1)
             } else {
                 Text("未知")
+                    .foregroundStyle(.secondary)
             }
         }
+        .font(.callout)
     }
 
     private let sceneColumns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
@@ -105,6 +111,8 @@ struct PanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             // 提示只占一行：行数一变，整个面板就会跟着变高变矮，看起来一跳一跳的
             Text(scenes.selectedScene == nil ? "场景 · 未选，只保留当前在用的应用" : "场景 · 再点一次取消")
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .contentTransition(.opacity)
             // 系统的分段选择器不能取消选中，所以用按钮；一行 3 个，自定义场景多了就排到第二行
@@ -150,6 +158,8 @@ struct PanelView: View {
             if expanded == .hidden {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("点一下叫回来")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     appList(hiddenApps) { app in
                         Button {
                             onBringBack(app)
@@ -187,10 +197,14 @@ struct PanelView: View {
             if expanded == .running {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(runningAppsHint)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2, reservesSpace: true)
                         .contentTransition(.opacity)
                     if runningApps.apps.isEmpty {
                         Text("没有其他正在运行的应用")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     } else {
                         appList(runningAppsByRecentUse) { app in
                             HoverRow { isHovered in
@@ -229,12 +243,16 @@ struct PanelView: View {
     private func runningRowTrailing(_ app: RunningApp, isHovered: Bool) -> some View {
         if quittingIDs.contains(app.bundleID) {
             Text("退出中…")
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .transition(.opacity)
         } else {
             let showsQuit = isHovered && QuitRules.canQuitFromPanel(app)
             ZStack(alignment: .trailing) {
                 if let lastUsed = lastUsedText(for: app) {
                     Text(lastUsed)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                         .opacity(showsQuit ? 0 : 1)
                 }
                 if QuitRules.canQuitFromPanel(app) {
@@ -285,15 +303,9 @@ struct PanelView: View {
         VStack(alignment: .leading, spacing: 10) {
             SceneEditorView(scenes: scenes)
 
-            // 文字单独放：开关用小号时，系统会把它自带的文字也缩小，和其他设置项的字不一样大
-            HStack {
-                Text("清理时播放提示音")
-                Spacer()
-                Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .labelsHidden()
-            }
+            Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
+                .toggleStyle(.switch)
+                .controlSize(.small)
 
             if settings.soundEnabled && !settings.availableCleanSounds.isEmpty {
                 settingPicker(
@@ -316,14 +328,18 @@ struct PanelView: View {
 
             HStack {
                 Text("清理快捷键")
+                    .font(.callout)
                 Spacer()
                 KeyboardShortcuts.Recorder(for: .cleanDesktop)
+                    .controlSize(.small)
             }
 
             HStack {
                 Text("打开面板快捷键")
+                    .font(.callout)
                 Spacer()
                 KeyboardShortcuts.Recorder(for: .togglePanel)
+                    .controlSize(.small)
             }
         }
         .padding(.vertical, 4)
@@ -339,12 +355,14 @@ struct PanelView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
+                .font(.callout)
             Picker(title, selection: selection) {
                 ForEach(options) { option in
                     Text(option[keyPath: label]).tag(option)
                 }
             }
             .labelsHidden()
+            .controlSize(.small)
         }
     }
 
@@ -467,8 +485,11 @@ private struct SectionHeader: View {
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .frame(width: 12)
                 Text(title)
+                    .font(.callout)
                 Spacer()
                 Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .frame(height: 24)
             .padding(.horizontal, 8)
