@@ -4,6 +4,8 @@
 
 当前状态：**开发中**。第一版功能已完成，正在自己试用。
 
+内置番茄钟：面板里点"开始专注"，屏幕角落出现玻璃小时钟；专注到点后提醒休息，休息时毛玻璃铺满屏幕（随时可跳过，不会收起或关闭任何应用）。时长和提醒方式在面板的"设置"里改。
+
 ## 装成应用（日常使用）
 
 ```bash
@@ -89,8 +91,10 @@ Sources/
   DeskTidy/                应用本体：菜单栏图标、面板界面、启动设置
     main.swift             应用入口：启动应用，并设置不在 Dock 显示图标
     AppDelegate.swift      创建菜单栏图标，点击时弹出面板
+    Focus*.swift           番茄钟：计时、角落小时钟、什么时候提醒
+    BreakOverlayPresenter.swift  休息时铺满屏幕的毛玻璃
     Views/                 界面
-  DeskTidyCore/            核心逻辑：清理规则、场景、数据存储（不含界面）
+  DeskTidyCore/            核心逻辑：清理规则、场景、番茄钟计时规则、数据存储（不含界面）
 Tests/
   DeskTidyCoreTests/       核心逻辑的自动测试
 Vendor/KeyboardShortcuts/  快捷键库（开源，改了一处资源查找位置，见其中的 README）

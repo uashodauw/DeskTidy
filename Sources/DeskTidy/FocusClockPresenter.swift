@@ -16,6 +16,7 @@ final class FocusClockPresenter {
 
     private let panel: KeyablePanel
     private var moveObserver: NSObjectProtocol?
+    private var screenObserver: NSObjectProtocol?
     private(set) var isShown = false
     private var generation = 0
 
@@ -45,12 +46,21 @@ final class FocusClockPresenter {
         moveObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didMoveNotification, object: panel, queue: .main
         ) { [weak self] _ in self?.saveOrigin() }
+        // 小时钟所在的显示器被拔掉、或分辨率变了：看不见了就挪回主屏幕右下角
+        screenObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.keepOnScreen() }
     }
 
     deinit {
-        if let moveObserver {
-            NotificationCenter.default.removeObserver(moveObserver)
+        for observer in [moveObserver, screenObserver].compactMap({ $0 }) {
+            NotificationCenter.default.removeObserver(observer)
         }
+    }
+
+    private func keepOnScreen() {
+        guard isShown, !Self.isVisible(origin: panel.frame.origin) else { return }
+        panel.setFrameOrigin(defaultOrigin())
     }
 
     private static var windowSize: NSSize {
@@ -108,14 +118,18 @@ final class FocusClockPresenter {
             return nil
         }
         let origin = NSPoint(x: values[0], y: values[1])
+        return Self.isVisible(origin: origin) ? origin : nil
+    }
+
+    /// 小时钟贴在窗口右下角；看那一块还在不在某块屏幕上
+    private static func isVisible(origin: NSPoint) -> Bool {
         let clockArea = NSRect(
-            x: origin.x + Self.windowSize.width - Self.shadowMargin - 120,
-            y: origin.y + Self.shadowMargin,
+            x: origin.x + windowSize.width - shadowMargin - 120,
+            y: origin.y + shadowMargin,
             width: 120,
             height: 50
         )
-        guard NSScreen.screens.contains(where: { $0.visibleFrame.intersects(clockArea) }) else { return nil }
-        return origin
+        return NSScreen.screens.contains { $0.visibleFrame.intersects(clockArea) }
     }
 
     private struct ClockContainer<Content: View>: View {
