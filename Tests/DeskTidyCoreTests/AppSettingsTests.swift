@@ -32,6 +32,19 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(AppSettings(defaults: defaults).soundEnabled)
     }
 
+    func testPetIsShownByDefaultAndCanBeTurnedOff() {
+        XCTAssertTrue(AppSettings(defaults: defaults).petEnabled)
+        AppSettings(defaults: defaults).petEnabled = false
+        XCTAssertFalse(AppSettings(defaults: defaults).petEnabled)
+    }
+
+    func testBrokenPetSettingFallsBackToShown() {
+        defaults.set("no", forKey: AppSettings.petEnabledKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertTrue(settings.petEnabled)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+    }
+
     func testWelcomeIsNotShownYetOnFreshInstall() {
         XCTAssertFalse(AppSettings(defaults: defaults).welcomeShown)
     }

@@ -40,6 +40,10 @@ struct PanelView: View {
                     .foregroundStyle(Color.white)
                     .shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1)
                 Spacer()
+                if settings.petEnabled {
+                    TidyPetView(mood: PetMood.from(visibleAppCount: runningApps.apps.filter { !$0.isHidden }.count))
+                        .transition(.opacity)
+                }
                 Text("v\(AppInfo.version)")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -271,6 +275,10 @@ struct PanelView: View {
             if expanded == .settings {
                 VStack(alignment: .leading, spacing: 10) {
                     SceneEditorView(scenes: scenes)
+
+                    Toggle("在面板上显示小桌宠", isOn: $settings.petEnabled.animation(TidyMotion.layout))
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
 
                     Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
                         .toggleStyle(.switch)

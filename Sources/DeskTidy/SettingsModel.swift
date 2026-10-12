@@ -13,6 +13,10 @@ final class SettingsModel: ObservableObject {
         didSet { settings.soundEnabled = soundEnabled }
     }
 
+    @Published var petEnabled: Bool {
+        didSet { settings.petEnabled = petEnabled }
+    }
+
     /// 换声音时马上试听一次
     @Published var cleanSound: CleanSound {
         didSet {
@@ -37,6 +41,7 @@ final class SettingsModel: ObservableObject {
 
     init() {
         soundEnabled = settings.soundEnabled
+        petEnabled = settings.petEnabled
         cleanSound = CleanSound.resolve(settings.cleanSound, fileExists: FileManager.default.fileExists(atPath:))
             ?? settings.cleanSound
         idleThreshold = settings.idleThreshold
