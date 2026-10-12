@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let welcome = GlassWindowPresenter(placement: .center)
     private let focus = FocusModel()
     private lazy var focusCoordinator = FocusCoordinator(focus: focus)
+    private lazy var settingsWindow = SettingsWindowController(scenes: scenes, settings: settings)
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -26,10 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             frontmostApp: frontmostApp,
             cleanup: cleanup,
             scenes: scenes,
-            settings: settings,
             usage: usage,
             focus: focus,
             onStartFocus: { [weak self] in self?.startFocus() },
+            onOpenSettings: { [weak self] in self?.openSettings() },
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) },
@@ -74,6 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static let brandIcon = NSImage(systemSymbolName: "sparkles", accessibilityDescription: AppInfo.displayName)
     private static var brandToolTip: String { "\(AppInfo.displayName)（\(AppInfo.brandName)）" }
+
+    private func openSettings() {
+        panel?.close()
+        settingsWindow.show()
+    }
 
     // MARK: - 番茄钟
 

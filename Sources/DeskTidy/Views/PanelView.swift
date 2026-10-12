@@ -1,5 +1,4 @@
 import AppKit
-import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
 
@@ -8,11 +7,11 @@ struct PanelView: View {
     @ObservedObject var frontmostApp: FrontmostAppModel
     @ObservedObject var cleanup: CleanupController
     @ObservedObject var scenes: SceneModel
-    @ObservedObject var settings: SettingsModel
     let usage: UsageModel
     /// 不用 @ObservedObject：计时中每秒都在变，只让专注那一行订阅，整个面板不跟着每秒重画
     let focus: FocusModel
     let onStartFocus: () -> Void
+    let onOpenSettings: () -> Void
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
@@ -20,7 +19,7 @@ struct PanelView: View {
     let onQuit: (RunningApp) -> Void
 
     private enum Area {
-        case hidden, running, settings
+        case hidden, running
     }
 
     /// 一次只展开一个，面板才不会被拉得很长。默认全部收起。
@@ -32,8 +31,6 @@ struct PanelView: View {
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 156
-    /// 设置项越加越多，全部摊开会比面板窗口还高，底边被切掉；超过这个高度就在区域里滚动
-    private let maxSettingsHeight: CGFloat = 280
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -76,13 +73,17 @@ struct PanelView: View {
                     .padding(.bottom, 4)
                 hiddenAppsSection
                 runningAppsSection
-                settingsSection
             }
 
-            Button("退出") {
-                NSApp.terminate(nil)
+            HStack {
+                Button("设置…", action: onOpenSettings)
+                    .keyboardShortcut(",")
+                Spacer()
+                Button("退出") {
+                    NSApp.terminate(nil)
+                }
+                .keyboardShortcut("q")
             }
-            .keyboardShortcut("q")
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
@@ -138,10 +139,6 @@ struct PanelView: View {
 
     private func sectionHeader(_ title: String, detail: String, section: Area) -> some View {
         SectionHeader(title: title, detail: detail, isExpanded: expanded == section) {
-            // 设置收起后输入框还在（只是看不见），光标留在里面的话，打字会打进看不见的框里
-            if expanded == .settings {
-                NSApp.keyWindow?.makeFirstResponder(nil)
-            }
             withAnimation(TidyMotion.layout) {
                 expanded = expanded == section ? nil : section
             }
@@ -286,118 +283,6 @@ struct PanelView: View {
         }
     }
 
-    /// 设置里全是系统控件（输入框、下拉菜单、开关、快捷键录制框）。如果每次展开才新建，
-    /// 它们要等挂到窗口上之后才画出灰色底，而且不跟着淡入动画走，看起来就是"延迟才变灰"；
-    /// 一次新建十来个还会卡住展开动画。所以面板一出来就建好，收起时只是把高度压成 0、藏起来。
-    private var settingsSection: some View {
-        let isOpen = expanded == .settings
-        return Group {
-            sectionHeader("设置", detail: "", section: .settings)
-            CappedScrollView(maxHeight: maxSettingsHeight) {
-                settingsContent
-            }
-            // 只裁掉、不调透明度：系统控件跟不上透明度渐变，会先整块亮一下再变淡，看起来就是闪
-            .frame(height: isOpen ? nil : 0, alignment: .top)
-            .clipped()
-            .allowsHitTesting(isOpen)
-            .accessibilityHidden(!isOpen)
-        }
-    }
-
-    private var settingsContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SceneEditorView(scenes: scenes)
-
-            Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
-                .toggleStyle(.switch)
-                .controlSize(.small)
-
-            if settings.soundEnabled && !settings.availableCleanSounds.isEmpty {
-                settingPicker(
-                    "提示音（选中即试听）",
-                    selection: $settings.cleanSound,
-                    options: settings.availableCleanSounds,
-                    label: \.label
-                )
-                .transition(.opacity)
-            }
-
-            settingPicker("多久没用算很久", selection: $settings.idleThreshold, options: IdleThreshold.allCases, label: \.label)
-
-            settingPicker(
-                "很久没用的提醒",
-                selection: $settings.idleReminderFrequency,
-                options: IdleReminderFrequency.allCases,
-                label: \.label
-            )
-
-            minutesPicker("专注时长", selection: $settings.focusMinutes, options: FocusDurationOptions.focusMinutes)
-            minutesPicker("休息时长", selection: $settings.shortBreakMinutes, options: FocusDurationOptions.shortBreakMinutes)
-            minutesPicker("每 4 个专注后的长休息", selection: $settings.longBreakMinutes, options: FocusDurationOptions.longBreakMinutes)
-            settingPicker(
-                "休息时怎么提醒",
-                selection: $settings.breakReminderStyle,
-                options: BreakReminderStyle.allCases,
-                label: \.label
-            )
-            Toggle("专注时在屏幕角落显示小时钟", isOn: $settings.showsFocusClock)
-                .toggleStyle(.switch)
-                .controlSize(.small)
-
-            HStack {
-                Text("清理快捷键")
-                    .font(.callout)
-                Spacer()
-                KeyboardShortcuts.Recorder(for: .cleanDesktop)
-                    .controlSize(.small)
-            }
-
-            HStack {
-                Text("打开面板快捷键")
-                    .font(.callout)
-                Spacer()
-                KeyboardShortcuts.Recorder(for: .togglePanel)
-                    .controlSize(.small)
-            }
-        }
-        .padding(.vertical, 4)
-        // 给右边浮出来的滚动条留位置
-        .padding(.trailing, 10)
-    }
-
-    private func settingPicker<Option: Hashable & Identifiable>(
-        _ title: String,
-        selection: Binding<Option>,
-        options: [Option],
-        label: KeyPath<Option, String>
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.callout)
-            Picker(title, selection: selection) {
-                ForEach(options) { option in
-                    Text(option[keyPath: label]).tag(option)
-                }
-            }
-            .labelsHidden()
-            .controlSize(.small)
-        }
-    }
-
-    private func minutesPicker(_ title: String, selection: Binding<Int>, options: [Int]) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.callout)
-            Picker(title, selection: selection) {
-                ForEach(options, id: \.self) { minutes in
-                    Text(FocusDurationOptions.label(minutes: minutes)).tag(minutes)
-                }
-            }
-            .labelsHidden()
-            .controlSize(.small)
-        }
-    }
-
     // MARK: - 列表
 
     private func appList<Row: View>(_ apps: [RunningApp], @ViewBuilder row: @escaping (RunningApp) -> Row) -> some View {
@@ -442,36 +327,6 @@ struct PanelView: View {
             return "双击打开，悬停点 ✕ 退出应用；打勾 = 在「\(scene.name)」中保留"
         }
         return "双击打开，悬停点 ✕ 退出应用；选一个场景才能勾选保留"
-    }
-}
-
-/// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
-/// ScrollView 自己不会按内容决定高度，所以先量出内容有多高。
-private struct CappedScrollView<Content: View>: View {
-    let maxHeight: CGFloat
-    @ViewBuilder let content: Content
-
-    @State private var contentHeight: CGFloat?
-
-    var body: some View {
-        ScrollView(.vertical) {
-            content
-                .background(GeometryReader { proxy in
-                    Color.clear.preference(key: ContentHeightKey.self, value: proxy.size.height)
-                })
-        }
-        .frame(height: min(contentHeight ?? maxHeight, maxHeight))
-        .onPreferenceChange(ContentHeightKey.self) { height in
-            contentHeight = height
-        }
-    }
-}
-
-private struct ContentHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
     }
 }
 
