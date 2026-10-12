@@ -106,6 +106,8 @@ final class GlassPanelPresenter: NSObject {
         panel.alphaValue = 0
         // 不激活本应用：用户正在用的应用保持在前台，面板照样能接收键盘输入（录快捷键）
         panel.makeKeyAndOrderFront(nil)
+        // 设置里的输入框一直在面板里（收起时只是看不见），不能让系统自动把光标放进去
+        panel.makeFirstResponder(nil)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.26
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 1.15, 0.35, 1)

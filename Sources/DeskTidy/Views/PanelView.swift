@@ -125,6 +125,10 @@ struct PanelView: View {
 
     private func sectionHeader(_ title: String, detail: String, section: Area) -> some View {
         SectionHeader(title: title, detail: detail, isExpanded: expanded == section) {
+            // 设置收起后输入框还在（只是看不见），光标留在里面的话，打字会打进看不见的框里
+            if expanded == .settings {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
             withAnimation(TidyMotion.layout) {
                 expanded = expanded == section ? nil : section
             }
@@ -259,15 +263,21 @@ struct PanelView: View {
         }
     }
 
+    /// 设置里全是系统控件（输入框、下拉菜单、开关、快捷键录制框）。如果每次展开才新建，
+    /// 它们要等挂到窗口上之后才画出灰色底，而且不跟着淡入动画走，看起来就是"延迟才变灰"；
+    /// 一次新建十来个还会卡住展开动画。所以面板一出来就建好，收起时只是把高度压成 0、藏起来。
     private var settingsSection: some View {
-        Group {
+        let isOpen = expanded == .settings
+        return Group {
             sectionHeader("设置", detail: "", section: .settings)
-            if expanded == .settings {
-                CappedScrollView(maxHeight: maxSettingsHeight) {
-                    settingsContent
-                }
-                .transition(sectionTransition)
+            CappedScrollView(maxHeight: maxSettingsHeight) {
+                settingsContent
             }
+            .frame(height: isOpen ? nil : 0, alignment: .top)
+            .clipped()
+            .opacity(isOpen ? 1 : 0)
+            .allowsHitTesting(isOpen)
+            .accessibilityHidden(!isOpen)
         }
     }
 
