@@ -57,7 +57,7 @@ public final class AppSettings {
         set { defaults.set(newValue, forKey: Self.soundEnabledKey) }
     }
 
-    /// 面板上是否显示小桌宠。没设置过时默认显示。
+    /// 桌面右下角是否显示小猫。没设置过时默认显示。
     public var petEnabled: Bool {
         get { defaults.object(forKey: Self.petEnabledKey) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Self.petEnabledKey) }

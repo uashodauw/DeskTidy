@@ -16,4 +16,18 @@ final class PetMoodTests: XCTestCase {
         XCTAssertEqual(PetMood.from(visibleAppCount: 10), .dizzy)
         XCTAssertEqual(PetMood.from(visibleAppCount: 30), .dizzy)
     }
+
+    private let now = Date(timeIntervalSince1970: 1_000_000)
+
+    func testFirstDizzyHintIsShown() {
+        XCTAssertTrue(PetHintPolicy.shouldShowDizzyHint(lastShown: nil, now: now))
+    }
+
+    func testDizzyHintIsNotRepeatedWithinHalfAnHour() {
+        XCTAssertFalse(PetHintPolicy.shouldShowDizzyHint(lastShown: now.addingTimeInterval(-29 * 60), now: now))
+    }
+
+    func testDizzyHintCanReturnAfterHalfAnHour() {
+        XCTAssertTrue(PetHintPolicy.shouldShowDizzyHint(lastShown: now.addingTimeInterval(-30 * 60), now: now))
+    }
 }

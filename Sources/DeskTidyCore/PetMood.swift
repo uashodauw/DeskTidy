@@ -1,4 +1,6 @@
-/// 面板上小桌宠的心情：跟着桌面上开着（没被收起）的应用数量变。
+import Foundation
+
+/// 桌面小猫的心情：跟着桌面上开着（没被收起）的应用数量变。
 public enum PetMood: Equatable {
     /// 桌面很清爽，眯眼笑
     case happy
@@ -15,5 +17,15 @@ public enum PetMood: Equatable {
         if visibleAppCount >= dizzyFrom { return .dizzy }
         if visibleAppCount >= calmFrom { return .calm }
         return .happy
+    }
+}
+
+/// 桌宠什么时候冒气泡提醒"有点乱了"：只提醒，从不自动清理；而且不能老是说，烦人。
+public enum PetHintPolicy {
+    public static let dizzyHintInterval: TimeInterval = 30 * 60
+
+    public static func shouldShowDizzyHint(lastShown: Date?, now: Date) -> Bool {
+        guard let lastShown else { return true }
+        return now.timeIntervalSince(lastShown) >= dizzyHintInterval
     }
 }

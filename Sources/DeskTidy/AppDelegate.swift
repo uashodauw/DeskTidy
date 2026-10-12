@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
@@ -15,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let idleApps = GlassWindowPresenter(placement: .topRight)
     private let welcome = GlassWindowPresenter(placement: .center)
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
+    private lazy var pet = DeskPetPresenter(runningApps: runningApps)
+    private var petSetting: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
@@ -59,6 +62,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !settings.welcomeShown {
             DispatchQueue.main.async { [weak self] in self?.showWelcome() }
         }
+
+        if settings.petEnabled {
+            pet.show()
+            pet.greet()
+        }
+        petSetting = settings.$petEnabled.dropFirst().removeDuplicates().sink { [weak self] enabled in
+            enabled ? self?.pet.show() : self?.pet.hide()
+        }
     }
 
     private func showWelcome() {
@@ -86,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hiddenCount = cleanup.clean()
         toast.show(CleanupFeedback(hiddenCount: hiddenCount))
         settings.playCleanSoundIfEnabled()
+        pet.celebrate()
         showIdleApps()
     }
 
