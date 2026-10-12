@@ -262,6 +262,19 @@ final class BreakEscalationTests: XCTestCase {
     }
 }
 
+final class FocusDurationOptionsTests: XCTestCase {
+    func testDefaultsAreInTheLists() {
+        XCTAssertTrue(FocusDurationOptions.focusMinutes.contains(FocusDurationOptions.defaultFocusMinutes))
+        XCTAssertTrue(FocusDurationOptions.shortBreakMinutes.contains(FocusDurationOptions.defaultShortBreakMinutes))
+        XCTAssertTrue(FocusDurationOptions.longBreakMinutes.contains(FocusDurationOptions.defaultLongBreakMinutes))
+    }
+
+    func testLabels() {
+        XCTAssertEqual(FocusDurationOptions.label(minutes: 25), "25 分钟")
+        XCTAssertEqual(FocusDurationOptions.label(minutes: 1), "1 分钟（测试用）")
+    }
+}
+
 final class RestTipsTests: XCTestCase {
     func testTipsRotateAndWrap() {
         XCTAssertEqual(RestTips.tip(for: 0), RestTips.all[0])

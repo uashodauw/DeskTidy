@@ -9,6 +9,8 @@ final class FocusModel: ObservableObject {
     @Published private(set) var now = Date()
     /// 每到点一次加一：小时钟看到它变了，就轻轻跳一下引起注意
     @Published private(set) var attentionCount = 0
+    /// 开会模式：休息时不铺满屏幕，只用小时钟提醒。只在这次运行中有效，关掉 DeskTidy 就恢复
+    @Published var meetingMode = false
 
     /// 一段到点了（专注结束 / 休息结束）
     var onEvent: ((FocusTimer.Event) -> Void)?

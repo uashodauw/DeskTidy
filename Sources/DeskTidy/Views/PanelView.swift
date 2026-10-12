@@ -331,6 +331,19 @@ struct PanelView: View {
                 label: \.label
             )
 
+            minutesPicker("专注时长", selection: $settings.focusMinutes, options: FocusDurationOptions.focusMinutes)
+            minutesPicker("休息时长", selection: $settings.shortBreakMinutes, options: FocusDurationOptions.shortBreakMinutes)
+            minutesPicker("每 4 个专注后的长休息", selection: $settings.longBreakMinutes, options: FocusDurationOptions.longBreakMinutes)
+            settingPicker(
+                "休息时怎么提醒",
+                selection: $settings.breakReminderStyle,
+                options: BreakReminderStyle.allCases,
+                label: \.label
+            )
+            Toggle("专注时在屏幕角落显示小时钟", isOn: $settings.showsFocusClock)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+
             HStack {
                 Text("清理快捷键")
                     .font(.callout)
@@ -364,6 +377,20 @@ struct PanelView: View {
             Picker(title, selection: selection) {
                 ForEach(options) { option in
                     Text(option[keyPath: label]).tag(option)
+                }
+            }
+            .labelsHidden()
+            .controlSize(.small)
+        }
+    }
+
+    private func minutesPicker(_ title: String, selection: Binding<Int>, options: [Int]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.callout)
+            Picker(title, selection: selection) {
+                ForEach(options, id: \.self) { minutes in
+                    Text(FocusDurationOptions.label(minutes: minutes)).tag(minutes)
                 }
             }
             .labelsHidden()

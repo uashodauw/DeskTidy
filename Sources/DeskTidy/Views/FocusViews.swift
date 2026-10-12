@@ -75,7 +75,10 @@ struct FocusPanelRow: View {
 
     var body: some View {
         if focus.timer.isActive {
-            activeRow
+            VStack(alignment: .leading, spacing: 6) {
+                activeRow
+                meetingToggle
+            }
         } else {
             Button(action: onStartFocus) {
                 Label("开始专注 \(focus.focusMinutes) 分钟", systemImage: "timer")
@@ -118,6 +121,24 @@ struct FocusPanelRow: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.primary.opacity(0.05))
         )
+    }
+
+    /// 开会、共享屏幕时打开：休息不铺满屏幕，免得在别人面前突然盖住屏幕
+    private var meetingToggle: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "person.2.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("开会模式：休息时不铺满屏幕")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            Toggle("开会模式", isOn: $focus.meetingMode)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 10)
     }
 
     private func statusText(for timer: FocusTimer) -> String {

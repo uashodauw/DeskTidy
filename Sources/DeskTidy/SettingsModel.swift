@@ -31,6 +31,31 @@ final class SettingsModel: ObservableObject {
         didSet { settings.idleReminderFrequency = idleReminderFrequency }
     }
 
+    /// 番茄钟的设置变了：计时器换成新时长，小时钟按新设置显示或收起
+    var onFocusSettingsChange: (() -> Void)?
+
+    @Published var focusMinutes: Int {
+        didSet { settings.focusMinutes = focusMinutes; onFocusSettingsChange?() }
+    }
+
+    @Published var shortBreakMinutes: Int {
+        didSet { settings.shortBreakMinutes = shortBreakMinutes; onFocusSettingsChange?() }
+    }
+
+    @Published var longBreakMinutes: Int {
+        didSet { settings.longBreakMinutes = longBreakMinutes; onFocusSettingsChange?() }
+    }
+
+    @Published var breakReminderStyle: BreakReminderStyle {
+        didSet { settings.breakReminderStyle = breakReminderStyle; onFocusSettingsChange?() }
+    }
+
+    @Published var showsFocusClock: Bool {
+        didSet { settings.showsFocusClock = showsFocusClock; onFocusSettingsChange?() }
+    }
+
+    var focusDurations: FocusDurations { settings.focusDurations }
+
     private var idleReminderShownThisLaunch = false
 
     var recoveredFromCorruptData: Bool { settings.recoveredFromCorruptData }
@@ -41,6 +66,11 @@ final class SettingsModel: ObservableObject {
             ?? settings.cleanSound
         idleThreshold = settings.idleThreshold
         idleReminderFrequency = settings.idleReminderFrequency
+        focusMinutes = settings.focusMinutes
+        shortBreakMinutes = settings.shortBreakMinutes
+        longBreakMinutes = settings.longBreakMinutes
+        breakReminderStyle = settings.breakReminderStyle
+        showsFocusClock = settings.showsFocusClock
         loadCleanSound()
     }
 

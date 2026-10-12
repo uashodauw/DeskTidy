@@ -16,6 +16,62 @@ final class AppSettingsTests: XCTestCase {
         super.tearDown()
     }
 
+    func testFocusDefaults() {
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.focusMinutes, 25)
+        XCTAssertEqual(settings.shortBreakMinutes, 5)
+        XCTAssertEqual(settings.longBreakMinutes, 15)
+        XCTAssertEqual(settings.breakReminderStyle, .coverScreen)
+        XCTAssertTrue(settings.showsFocusClock)
+        XCTAssertEqual(settings.focusDurations, .standard)
+    }
+
+    func testFocusSettingsAreRemembered() {
+        let settings = AppSettings(defaults: defaults)
+        settings.focusMinutes = 50
+        settings.shortBreakMinutes = 10
+        settings.longBreakMinutes = 30
+        settings.breakReminderStyle = .clockOnly
+        settings.showsFocusClock = false
+        let reopened = AppSettings(defaults: defaults)
+        XCTAssertEqual(reopened.focusMinutes, 50)
+        XCTAssertEqual(reopened.shortBreakMinutes, 10)
+        XCTAssertEqual(reopened.longBreakMinutes, 30)
+        XCTAssertEqual(reopened.breakReminderStyle, .clockOnly)
+        XCTAssertFalse(reopened.showsFocusClock)
+        XCTAssertEqual(reopened.focusDurations, FocusDurations(focusMinutes: 50, shortBreakMinutes: 10, longBreakMinutes: 30))
+    }
+
+    func testFocusMinutesNotInTheListFallBackToDefault() {
+        defaults.set(7, forKey: AppSettings.focusMinutesKey)
+        defaults.set("五分钟", forKey: AppSettings.shortBreakMinutesKey)
+        defaults.set(999, forKey: AppSettings.longBreakMinutesKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.focusMinutes, 25)
+        XCTAssertEqual(settings.shortBreakMinutes, 5)
+        XCTAssertEqual(settings.longBreakMinutes, 15)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+        XCTAssertNil(defaults.object(forKey: AppSettings.focusMinutesKey))
+    }
+
+    func testUnknownBreakStyleFallsBackToDefault() {
+        defaults.set("乱码", forKey: AppSettings.breakReminderStyleKey)
+        defaults.set("yes", forKey: AppSettings.showsFocusClockKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.breakReminderStyle, .coverScreen)
+        XCTAssertTrue(settings.showsFocusClock)
+        XCTAssertTrue(settings.recoveredFromCorruptData)
+    }
+
+    func testValidFocusSettingsAreNotTreatedAsCorrupt() {
+        defaults.set(1, forKey: AppSettings.focusMinutesKey)
+        defaults.set(BreakReminderStyle.coverScreenFirmly.rawValue, forKey: AppSettings.breakReminderStyleKey)
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(settings.focusMinutes, 1)
+        XCTAssertEqual(settings.breakReminderStyle, .coverScreenFirmly)
+        XCTAssertFalse(settings.recoveredFromCorruptData)
+    }
+
     func testSoundIsOnByDefault() {
         XCTAssertTrue(AppSettings(defaults: defaults).soundEnabled)
     }

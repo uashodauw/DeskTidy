@@ -9,6 +9,11 @@ public final class AppSettings {
     static let idleReminderLastShownKey = "idleReminderLastShown"
     static let cleanSoundKey = "cleanSound"
     static let welcomeShownKey = "welcomeShown"
+    static let focusMinutesKey = "focusMinutes"
+    static let shortBreakMinutesKey = "shortBreakMinutes"
+    static let longBreakMinutesKey = "longBreakMinutes"
+    static let breakReminderStyleKey = "breakReminderStyle"
+    static let showsFocusClockKey = "showsFocusClock"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -30,6 +35,16 @@ public final class AppSettings {
         if let value = defaults.object(forKey: Self.cleanSoundKey),
            (value as? String).flatMap(CleanSound.init(rawValue:)) == nil {
             discard(Self.cleanSoundKey)
+        }
+        discardUnlessAllowed(Self.focusMinutesKey, FocusDurationOptions.focusMinutes)
+        discardUnlessAllowed(Self.shortBreakMinutesKey, FocusDurationOptions.shortBreakMinutes)
+        discardUnlessAllowed(Self.longBreakMinutesKey, FocusDurationOptions.longBreakMinutes)
+        if let value = defaults.object(forKey: Self.breakReminderStyleKey),
+           (value as? String).flatMap(BreakReminderStyle.init(rawValue:)) == nil {
+            discard(Self.breakReminderStyleKey)
+        }
+        if let value = defaults.object(forKey: Self.showsFocusClockKey), value as? Bool == nil {
+            discard(Self.showsFocusClockKey)
         }
         // 上次提醒时间坏了不值得打扰用户，悄悄删掉即可，最多就是多提醒一次
         if let value = defaults.object(forKey: Self.idleReminderLastShownKey), value as? Double == nil {
@@ -92,6 +107,58 @@ public final class AppSettings {
                 defaults.removeObject(forKey: Self.idleReminderLastShownKey)
             }
         }
+    }
+
+    /// 番茄钟专注多少分钟。没设置过时 25 分钟。
+    public var focusMinutes: Int {
+        get { minutes(for: Self.focusMinutesKey, allowed: FocusDurationOptions.focusMinutes, default: FocusDurationOptions.defaultFocusMinutes) }
+        set { defaults.set(newValue, forKey: Self.focusMinutesKey) }
+    }
+
+    /// 每次休息多少分钟。没设置过时 5 分钟。
+    public var shortBreakMinutes: Int {
+        get {
+            minutes(for: Self.shortBreakMinutesKey, allowed: FocusDurationOptions.shortBreakMinutes, default: FocusDurationOptions.defaultShortBreakMinutes)
+        }
+        set { defaults.set(newValue, forKey: Self.shortBreakMinutesKey) }
+    }
+
+    /// 每 4 个专注之后的长休息多少分钟。没设置过时 15 分钟。
+    public var longBreakMinutes: Int {
+        get {
+            minutes(for: Self.longBreakMinutesKey, allowed: FocusDurationOptions.longBreakMinutes, default: FocusDurationOptions.defaultLongBreakMinutes)
+        }
+        set { defaults.set(newValue, forKey: Self.longBreakMinutesKey) }
+    }
+
+    public var focusDurations: FocusDurations {
+        FocusDurations(focusMinutes: focusMinutes, shortBreakMinutes: shortBreakMinutes, longBreakMinutes: longBreakMinutes)
+    }
+
+    /// 休息时怎么提醒。没设置过时铺满屏幕、随时可以跳过。
+    public var breakReminderStyle: BreakReminderStyle {
+        get {
+            (defaults.object(forKey: Self.breakReminderStyleKey) as? String).flatMap(BreakReminderStyle.init(rawValue:))
+                ?? .defaultValue
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.breakReminderStyleKey) }
+    }
+
+    /// 专注中是否在屏幕角落显示小时钟。没设置过时显示。
+    public var showsFocusClock: Bool {
+        get { defaults.object(forKey: Self.showsFocusClockKey) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Self.showsFocusClockKey) }
+    }
+
+    private func minutes(for key: String, allowed: [Int], default defaultValue: Int) -> Int {
+        guard let value = defaults.object(forKey: key) as? Int, allowed.contains(value) else { return defaultValue }
+        return value
+    }
+
+    private func discardUnlessAllowed(_ key: String, _ allowed: [Int]) {
+        guard let value = defaults.object(forKey: key) else { return }
+        if let minutes = value as? Int, allowed.contains(minutes) { return }
+        discard(key)
     }
 
     private func discard(_ key: String) {

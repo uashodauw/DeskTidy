@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.focusCoordinator.refresh()
         }
         focus.onEvent = { [weak self] event in self?.focusCoordinator.phaseEnded(event) }
+        configureFocus()
 
         KeyboardShortcuts.onKeyUp(for: .cleanDesktop) { [weak self] in
             self?.performClean()
@@ -75,6 +76,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static var brandToolTip: String { "\(AppInfo.displayName)（\(AppInfo.brandName)）" }
 
     // MARK: - 番茄钟
+
+    private func configureFocus() {
+        focus.setDurations(settings.focusDurations)
+        focusCoordinator.showsClockDuringFocus = { [weak self] in self?.settings.showsFocusClock ?? true }
+        focusCoordinator.breakStyle = { [weak self] in self?.settings.breakReminderStyle ?? .defaultValue }
+        focusCoordinator.meetingMode = { [weak self] in self?.focus.meetingMode ?? false }
+        // 改了时长：正在走的这一段不变，下一段开始按新时长
+        settings.onFocusSettingsChange = { [weak self] in
+            guard let self else { return }
+            self.focus.setDurations(self.settings.focusDurations)
+            self.focusCoordinator.refresh()
+        }
+    }
 
     private func startFocus() {
         panel?.close()

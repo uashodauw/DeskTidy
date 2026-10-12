@@ -203,6 +203,21 @@ public enum FocusClockText {
     }
 }
 
+/// 设置里能选的时长（分钟）。1 分钟只是方便试一试到点提醒，标成"测试用"。
+public enum FocusDurationOptions {
+    public static let focusMinutes = [1, 15, 20, 25, 30, 45, 50, 60]
+    public static let shortBreakMinutes = [1, 3, 5, 10, 15]
+    public static let longBreakMinutes = [10, 15, 20, 30]
+
+    public static let defaultFocusMinutes = 25
+    public static let defaultShortBreakMinutes = 5
+    public static let defaultLongBreakMinutes = 15
+
+    public static func label(minutes: Int) -> String {
+        minutes == 1 ? "1 分钟（测试用）" : "\(minutes) 分钟"
+    }
+}
+
 /// 休息时怎么提醒
 public enum BreakReminderStyle: String, CaseIterable, Identifiable {
     case clockOnly
