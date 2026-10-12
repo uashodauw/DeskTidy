@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let usage = UsageModel()
     private let idleApps = GlassWindowPresenter(placement: .topRight)
     private let welcome = GlassWindowPresenter(placement: .center)
+    private let focus = FocusModel()
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -26,6 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             scenes: scenes,
             settings: settings,
             usage: usage,
+            focus: focus,
+            onStartFocus: { [weak self] in self?.startFocus() },
             onClean: { [weak self] in self?.performClean() },
             onRestore: { [weak self] in self?.performRestore() },
             onBringBack: { [weak self] app in self?.performBringBack(app) },
@@ -36,12 +39,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 只放图标不放文字：菜单栏放不下时，新装应用的图标最先被系统藏起来，越窄越不容易被挤掉
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: AppInfo.displayName)
-            button.toolTip = "\(AppInfo.displayName)（\(AppInfo.brandName)）"
+            button.image = Self.brandIcon
+            button.toolTip = Self.brandToolTip
             button.target = self
             button.action = #selector(togglePanel)
         }
         statusItem = item
+
+        focus.onChange = { [weak self] in self?.updateStatusIcon() }
+        focus.onEvent = { [weak self] event in self?.focusPhaseEnded(event) }
 
         KeyboardShortcuts.onKeyUp(for: .cleanDesktop) { [weak self] in
             self?.performClean()
@@ -58,6 +64,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         if !settings.welcomeShown {
             DispatchQueue.main.async { [weak self] in self?.showWelcome() }
+        }
+    }
+
+    private static let brandIcon = NSImage(systemSymbolName: "sparkles", accessibilityDescription: AppInfo.displayName)
+    private static var brandToolTip: String { "\(AppInfo.displayName)（\(AppInfo.brandName)）" }
+
+    // MARK: - 番茄钟
+
+    private func startFocus() {
+        panel?.close()
+        focus.startFocus()
+    }
+
+    private func focusPhaseEnded(_ event: FocusTimer.Event) {
+        NSSound(named: "Glass")?.play()
+    }
+
+    /// 计时中菜单栏显示进度圆环，没在计时就是平时的星星
+    private func updateStatusIcon() {
+        guard let button = statusItem?.button else { return }
+        if focus.timer.isActive {
+            button.image = FocusStatusIcon.image(for: focus.timer, now: focus.now)
+            button.toolTip = FocusStatusIcon.spokenText(for: focus.timer, now: focus.now)
+        } else if button.image !== Self.brandIcon {
+            button.image = Self.brandIcon
+            button.toolTip = Self.brandToolTip
         }
     }
 

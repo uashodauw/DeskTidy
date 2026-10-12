@@ -10,6 +10,9 @@ struct PanelView: View {
     @ObservedObject var scenes: SceneModel
     @ObservedObject var settings: SettingsModel
     let usage: UsageModel
+    /// 不用 @ObservedObject：计时中每秒都在变，只让专注那一行订阅，整个面板不跟着每秒重画
+    let focus: FocusModel
+    let onStartFocus: () -> Void
     let onClean: () -> Void
     let onRestore: () -> Void
     let onBringBack: (RunningApp) -> Void
@@ -65,6 +68,8 @@ struct PanelView: View {
                     .disabled(!cleanup.canRestore)
                 }
             }
+
+            FocusPanelRow(focus: focus, onStartFocus: onStartFocus)
 
             VStack(alignment: .leading, spacing: 2) {
                 Divider()
