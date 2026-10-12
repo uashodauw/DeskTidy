@@ -234,6 +234,9 @@ struct PanelView: View {
 
     /// 行的右边：平时显示上次使用时间；鼠标移上来换成退出按钮；请求退出后显示"退出中…"。
     /// 退出按钮只在悬停时出现，避免随手一点就把应用关了。
+    ///
+    /// 时间和退出按钮一直都在，悬停只切换谁看得见：滑动时每经过一行就新建、销毁一次按钮，开销很大。
+    /// 退出按钮不挂悬停提示，同样是因为滑动时系统要不停更新它们；上面的说明文字已经讲了点 ✕ 退出。
     @ViewBuilder
     private func runningRowTrailing(_ app: RunningApp, isHovered: Bool) -> some View {
         if quittingIDs.contains(app.bundleID) {
@@ -241,23 +244,30 @@ struct PanelView: View {
                 .font(.caption)
                 .foregroundStyle(ListInk.secondary)
                 .transition(.opacity)
-        } else if isHovered && QuitRules.canQuitFromPanel(app) {
-            Button {
-                requestQuit(app)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(ListInk.secondary)
-                    .contentShape(Circle())
+        } else {
+            let showsQuit = isHovered && QuitRules.canQuitFromPanel(app)
+            ZStack(alignment: .trailing) {
+                if let lastUsed = lastUsedText(for: app) {
+                    Text(lastUsed)
+                        .font(.caption)
+                        .foregroundStyle(ListInk.tertiary)
+                        .opacity(showsQuit ? 0 : 1)
+                }
+                if QuitRules.canQuitFromPanel(app) {
+                    Button {
+                        requestQuit(app)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(ListInk.secondary)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(showsQuit ? 1 : 0)
+                    .allowsHitTesting(showsQuit)
+                }
             }
-            .buttonStyle(.plain)
-            .help("退出 \(app.name)（有没保存的内容会先问你）")
-            .transition(.opacity.combined(with: .scale(scale: 0.8)))
-        } else if let lastUsed = lastUsedText(for: app) {
-            Text(lastUsed)
-                .font(.caption)
-                .foregroundStyle(ListInk.tertiary)
-                .transition(.opacity)
+            .transition(.opacity)
         }
     }
 
@@ -401,6 +411,7 @@ private enum ListInk {
     static let primary = Color(nsColor: .labelColor)
     static let secondary = Color(nsColor: .secondaryLabelColor)
     static let tertiary = Color(nsColor: .tertiaryLabelColor)
+    static let highlight = Color(nsColor: .labelColor).opacity(0.08)
 }
 
 /// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
@@ -433,19 +444,15 @@ private struct ContentHeightKey: PreferenceKey {
     }
 }
 
-/// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
+/// 列表里的一行：鼠标一移上去就高亮，让人马上知道选中了这一行。
 /// 把"鼠标在不在这一行上"交给内容，内容可以据此显示额外的按钮（比如退出）。
 ///
-/// 鼠标要在这一行上停一小会儿才算悬停：滚动列表时，一行行从鼠标下面滑过，
-/// 每行都会"进入、离开"一次；如果每次都播放高亮和换按钮的动画，快速滑动时一秒要做几十次，会卡。
+/// 高亮不做渐变动画：快速滑动时一行行从鼠标下面滑过，每行都会"进入、离开"一次，
+/// 每次都播放动画的话，一秒要同时跑几十个动画，会卡。直接切换几乎不花力气，反馈也更快。
 private struct HoverRow<Content: View>: View {
     @ViewBuilder let content: (Bool) -> Content
 
     @State private var isHovered = false
-    /// 不放进 @State：等待中的状态变来变去时，不需要也不应该让这一行重画
-    @State private var tracker = HoverTracker()
-
-    private static var settleDelay: TimeInterval { 0.12 }
 
     var body: some View {
         content(isHovered)
@@ -453,55 +460,11 @@ private struct HoverRow<Content: View>: View {
             .frame(maxHeight: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.primary.opacity(isHovered ? 0.07 : 0))
+                    .fill(ListInk.highlight)
+                    .opacity(isHovered ? 1 : 0)
             )
             .contentShape(Rectangle())
-            .onHover { hovering in
-                tracker.isInside = hovering
-                if hovering {
-                    settleThenHighlight()
-                } else if isHovered {
-                    withAnimation(TidyMotion.color) { isHovered = false }
-                }
-            }
-    }
-
-    /// 列表还在滚（包括松手后的惯性滑动）就接着等，停稳了才高亮
-    private func settleThenHighlight() {
-        tracker.generation += 1
-        let current = tracker.generation
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) { [tracker] in
-            guard tracker.isInside, tracker.generation == current else { return }
-            if ScrollActivity.isScrolling {
-                settleThenHighlight()
-            } else {
-                withAnimation(TidyMotion.color) { isHovered = true }
-            }
-        }
-    }
-}
-
-private final class HoverTracker {
-    var isInside = false
-    var generation = 0
-}
-
-/// 记下最近一次滚动的时间，让列表的行知道"现在是在滚动，不是用户把鼠标停在我上面"。
-/// 双指滑动松手后的惯性部分也算滚动。
-enum ScrollActivity {
-    private static var lastScroll = Date.distantPast
-    private static var monitor: Any?
-
-    static var isScrolling: Bool {
-        Date().timeIntervalSince(lastScroll) < 0.15
-    }
-
-    static func startMonitoring() {
-        guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-            lastScroll = Date()
-            return event
-        }
+            .onHover { isHovered = $0 }
     }
 }
 

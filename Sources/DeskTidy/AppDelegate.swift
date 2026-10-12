@@ -19,7 +19,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         runningApps.refresh()
         usage.noteSeen(runningApps.apps)
-        ScrollActivity.startMonitoring()
         panel = GlassPanelPresenter(rootView: PanelView(
             runningApps: runningApps,
             frontmostApp: frontmostApp,
