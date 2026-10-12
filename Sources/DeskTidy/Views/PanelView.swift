@@ -291,9 +291,9 @@ struct PanelView: View {
             CappedScrollView(maxHeight: maxSettingsHeight) {
                 settingsContent
             }
+            // 只裁掉、不调透明度：系统控件跟不上透明度渐变，会先整块亮一下再变淡，看起来就是闪
             .frame(height: isOpen ? nil : 0, alignment: .top)
             .clipped()
-            .opacity(isOpen ? 1 : 0)
             .allowsHitTesting(isOpen)
             .accessibilityHidden(!isOpen)
         }
@@ -467,7 +467,7 @@ private struct HoverRow<Content: View>: View {
     }
 }
 
-/// 可折叠区域的标题行：箭头转动展开，鼠标移上去有淡淡的高亮，展开中的那一行垫一层玻璃。
+/// 可折叠区域的标题行：箭头转动展开，鼠标移上去有淡淡的高亮，展开中的那一行垫一层灰底。
 private struct SectionHeader: View {
     let title: String
     let detail: String
@@ -475,6 +475,11 @@ private struct SectionHeader: View {
     let action: () -> Void
 
     @State private var isHovered = false
+
+    private var backgroundOpacity: Double {
+        if isExpanded { return 0.09 }
+        return isHovered ? 0.06 : 0
+    }
 
     var body: some View {
         Button(action: action) {
@@ -494,15 +499,12 @@ private struct SectionHeader: View {
             .frame(height: 24)
             .padding(.horizontal, 8)
             .contentShape(Rectangle())
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.primary.opacity(isHovered && !isExpanded ? 0.06 : 0))
-                    Color.clear
-                        .tidyGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .opacity(isExpanded ? 1 : 0)
-                }
-            }
+            // 展开时的底色不用玻璃：系统的玻璃不跟着透明度渐变走，点开时会"啪"地一下冒出来，看起来像闪。
+            // 普通的半透明底色可以平滑地淡入淡出。
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.primary.opacity(backgroundOpacity))
+            )
         }
         .buttonStyle(.plain)
         .onHover { hovering in
