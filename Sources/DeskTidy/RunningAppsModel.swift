@@ -41,12 +41,36 @@ final class RunningAppsModel: ObservableObject {
         if let cached = iconCache[app.bundleID] {
             return cached
         }
-        guard let original = NSRunningApplication(processIdentifier: app.processID)?.icon else { return nil }
-        let small = NSImage(size: iconSize, flipped: false) { rect in
-            original.draw(in: rect)
-            return true
-        }
+        guard let original = NSRunningApplication(processIdentifier: app.processID)?.icon,
+              let small = Self.rasterize(original, to: iconSize) else { return nil }
         iconCache[app.bundleID] = small
         return small
+    }
+
+    /// 只画一次，存成固定像素的位图。不能用 NSImage(size:flipped:drawingHandler:)：
+    /// 它每次显示都会重新把原图（1024 像素）缩小画一遍，列表一滚动就每行每帧都在画，非常卡。
+    private static func rasterize(_ image: NSImage, to size: NSSize) -> NSImage? {
+        let scale: CGFloat = 2
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: Int(size.width * scale),
+            pixelsHigh: Int(size.height * scale),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else { return nil }
+        bitmap.size = size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(in: NSRect(origin: .zero, size: size))
+        NSGraphicsContext.restoreGraphicsState()
+        let result = NSImage(size: size)
+        result.addRepresentation(bitmap)
+        return result
     }
 }

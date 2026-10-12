@@ -219,9 +219,9 @@ struct PanelView: View {
                                     runningRowTrailing(app, isHovered: isHovered)
                                 }
                             }
-                            // 只认双击：勾选框自己会接住单击，单击行的其他地方什么都不做，也不会误打开
+                            // 只认双击：勾选框自己会接住单击，单击行的其他地方什么都不做，也不会误打开。
+                            // 不给每一行挂悬停提示：滚动时系统要不停更新它们，会卡；上面的说明文字已经讲了双击打开
                             .onTapGesture(count: 2) { onOpen(app) }
-                            .help("双击打开 \(app.name)")
                         }
                     }
                 }
@@ -393,8 +393,6 @@ struct PanelView: View {
     }
 }
 
-/// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
-/// 把"鼠标在不在这一行上"交给内容，内容可以据此显示额外的按钮（比如退出）。
 /// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
 /// ScrollView 自己不会按内容决定高度，所以先量出内容有多高。
 private struct CappedScrollView<Content: View>: View {
@@ -425,10 +423,18 @@ private struct ContentHeightKey: PreferenceKey {
     }
 }
 
+/// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
+/// 把"鼠标在不在这一行上"交给内容，内容可以据此显示额外的按钮（比如退出）。
+///
+/// 鼠标要在这一行上停一小会儿才算悬停：滚动列表时，一行行从鼠标下面滑过，
+/// 每行都会"进入、离开"一次；如果每次都播放高亮和换按钮的动画，快速滑动时一秒要做几十次，会卡。
 private struct HoverRow<Content: View>: View {
     @ViewBuilder let content: (Bool) -> Content
 
     @State private var isHovered = false
+    @State private var pendingHover: DispatchWorkItem?
+
+    private static var settleDelay: TimeInterval { 0.12 }
 
     var body: some View {
         content(isHovered)
@@ -440,7 +446,17 @@ private struct HoverRow<Content: View>: View {
             )
             .contentShape(Rectangle())
             .onHover { hovering in
-                withAnimation(TidyMotion.color) { isHovered = hovering }
+                pendingHover?.cancel()
+                pendingHover = nil
+                if hovering {
+                    let work = DispatchWorkItem {
+                        withAnimation(TidyMotion.color) { isHovered = true }
+                    }
+                    pendingHover = work
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay, execute: work)
+                } else if isHovered {
+                    withAnimation(TidyMotion.color) { isHovered = false }
+                }
             }
     }
 }
