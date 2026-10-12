@@ -9,7 +9,6 @@ public final class AppSettings {
     static let idleReminderLastShownKey = "idleReminderLastShown"
     static let cleanSoundKey = "cleanSound"
     static let welcomeShownKey = "welcomeShown"
-    static let petEnabledKey = "petEnabled"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -19,9 +18,6 @@ public final class AppSettings {
         self.defaults = defaults
         if let value = defaults.object(forKey: Self.soundEnabledKey), value as? Bool == nil {
             discard(Self.soundEnabledKey)
-        }
-        if let value = defaults.object(forKey: Self.petEnabledKey), value as? Bool == nil {
-            discard(Self.petEnabledKey)
         }
         if let value = defaults.object(forKey: Self.idleThresholdKey),
            (value as? Int).flatMap(IdleThreshold.init(rawValue:)) == nil {
@@ -55,12 +51,6 @@ public final class AppSettings {
     public var soundEnabled: Bool {
         get { defaults.object(forKey: Self.soundEnabledKey) as? Bool ?? true }
         set { defaults.set(newValue, forKey: Self.soundEnabledKey) }
-    }
-
-    /// 桌面右下角是否显示小猫。没设置过时默认显示。
-    public var petEnabled: Bool {
-        get { defaults.object(forKey: Self.petEnabledKey) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: Self.petEnabledKey) }
     }
 
     /// 清理时播放哪个声音。没设置过时默认用 iPhone 发送邮件的"嗖"。

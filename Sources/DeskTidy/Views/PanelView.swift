@@ -272,10 +272,6 @@ struct PanelView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     SceneEditorView(scenes: scenes)
 
-                    Toggle("在桌面显示小猫", isOn: $settings.petEnabled)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-
                     Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
                         .toggleStyle(.switch)
                         .controlSize(.small)

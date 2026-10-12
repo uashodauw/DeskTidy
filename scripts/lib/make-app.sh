@@ -56,7 +56,6 @@ make_app() {
     cp Packaging/Info.plist "$APP/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
     make_icon
-    cp -R Packaging/Pet "$APP/Contents/Resources/Pet"
 
     # 资源包（快捷键录制框的文字）必须放在 Contents 里面：签名不允许 .app 最外层有别的文件
     for bundle in "$BIN_DIR"/*.bundle; do

@@ -11,8 +11,7 @@ final class RunningAppsModel: ObservableObject {
     private var observers: [NSObjectProtocol] = []
 
     init() {
-        // 应用打开、退出、被收起或恢复时自动更新列表：在面板里退出应用后那一行要自己消失，
-        // 桌宠的心情也要跟着桌面上实际开着的应用变
+        // 应用打开、退出、被收起或恢复时自动更新列表：在面板里退出应用后那一行要自己消失
         let center = NSWorkspace.shared.notificationCenter
         let names = [
             NSWorkspace.didLaunchApplicationNotification,
