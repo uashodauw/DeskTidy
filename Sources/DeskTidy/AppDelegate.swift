@@ -68,7 +68,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pet.greet()
         }
         petSetting = settings.$petEnabled.dropFirst().removeDuplicates().sink { [weak self] enabled in
-            enabled ? self?.pet.show() : self?.pet.hide()
+            if enabled {
+                self?.pet.show()
+            } else {
+                self?.pet.hide()
+            }
         }
     }
 

@@ -129,8 +129,11 @@ final class DeskPetPresenter {
         }
     }
 
+    /// 快捷键库规定显示文字只能在主线程取；桌宠的一切都在主线程上发生
     private static func shortcutText(_ name: KeyboardShortcuts.Name) -> String {
-        KeyboardShortcuts.getShortcut(for: name)?.description ?? "面板里的「一键清理」"
+        MainActor.assumeIsolated {
+            KeyboardShortcuts.getShortcut(for: name)?.description ?? "面板里的「一键清理」"
+        }
     }
 }
 
