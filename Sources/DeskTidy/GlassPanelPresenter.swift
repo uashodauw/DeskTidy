@@ -185,8 +185,12 @@ struct PanelShadow: View {
 
     /// 两层阴影叠加，和 iOS 浮层的做法一样：
     /// 大而淡的一层往下扩散，表现"浮在空中"；贴边很淡的一层，让边缘有轮廓但不会出现一圈黑线。
+    /// 拍平成一张图再贴上去：模糊阴影加遮罩，系统不会缓存，
+    /// 面板里一滚动整个窗口每帧都要重新合成，阴影也跟着每帧重算，快速滑动列表就会卡。
+    /// 拍平的范围要包含面板外面的阴影，所以先往外扩，拍完再缩回来，不影响布局。
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
+        let reach = GlassPanelPresenter.shadowMargin
         ZStack {
             shape
                 .fill(Color.black)
@@ -196,6 +200,9 @@ struct PanelShadow: View {
                 .shadow(color: .black.opacity(0.07), radius: 3, y: 1)
         }
         .mask(OutsideOf(cornerRadius: cornerRadius).fill(style: FillStyle(eoFill: true)))
+        .padding(reach)
+        .drawingGroup()
+        .padding(-reach)
     }
 }
 

@@ -165,9 +165,10 @@ struct PanelView: View {
                                     appIcon(app)
                                     Text(app.name)
                                         .lineLimit(1)
+                                        .foregroundStyle(ListInk.primary)
                                     Spacer()
                                     Image(systemName: "arrow.up.forward.app")
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(ListInk.secondary)
                                 }
                             }
                         }
@@ -215,6 +216,7 @@ struct PanelView: View {
                                     appIcon(app)
                                     Text(app.name)
                                         .lineLimit(1)
+                                        .foregroundStyle(ListInk.primary)
                                     Spacer()
                                     runningRowTrailing(app, isHovered: isHovered)
                                 }
@@ -237,7 +239,7 @@ struct PanelView: View {
         if quittingIDs.contains(app.bundleID) {
             Text("退出中…")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ListInk.secondary)
                 .transition(.opacity)
         } else if isHovered && QuitRules.canQuitFromPanel(app) {
             Button {
@@ -245,7 +247,7 @@ struct PanelView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ListInk.secondary)
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
@@ -254,7 +256,7 @@ struct PanelView: View {
         } else if let lastUsed = lastUsedText(for: app) {
             Text(lastUsed)
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(ListInk.tertiary)
                 .transition(.opacity)
         }
     }
@@ -393,6 +395,14 @@ struct PanelView: View {
     }
 }
 
+/// 滚动列表里的文字颜色。不用 .primary / .secondary 这类"层级"颜色：放在玻璃上时它们会和背后的桌面实时混色，
+/// 列表一滚动，每行文字每帧都要重新混色。固定的系统文字颜色看起来一样，也会跟着深色模式变，但不需要实时混色。
+private enum ListInk {
+    static let primary = Color(nsColor: .labelColor)
+    static let secondary = Color(nsColor: .secondaryLabelColor)
+    static let tertiary = Color(nsColor: .tertiaryLabelColor)
+}
+
 /// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
 /// ScrollView 自己不会按内容决定高度，所以先量出内容有多高。
 private struct CappedScrollView<Content: View>: View {
@@ -432,7 +442,8 @@ private struct HoverRow<Content: View>: View {
     @ViewBuilder let content: (Bool) -> Content
 
     @State private var isHovered = false
-    @State private var pendingHover: DispatchWorkItem?
+    /// 不放进 @State：等待中的状态变来变去时，不需要也不应该让这一行重画
+    @State private var tracker = HoverTracker()
 
     private static var settleDelay: TimeInterval { 0.12 }
 
@@ -446,18 +457,51 @@ private struct HoverRow<Content: View>: View {
             )
             .contentShape(Rectangle())
             .onHover { hovering in
-                pendingHover?.cancel()
-                pendingHover = nil
+                tracker.isInside = hovering
                 if hovering {
-                    let work = DispatchWorkItem {
-                        withAnimation(TidyMotion.color) { isHovered = true }
-                    }
-                    pendingHover = work
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay, execute: work)
+                    settleThenHighlight()
                 } else if isHovered {
                     withAnimation(TidyMotion.color) { isHovered = false }
                 }
             }
+    }
+
+    /// 列表还在滚（包括松手后的惯性滑动）就接着等，停稳了才高亮
+    private func settleThenHighlight() {
+        tracker.generation += 1
+        let current = tracker.generation
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) { [tracker] in
+            guard tracker.isInside, tracker.generation == current else { return }
+            if ScrollActivity.isScrolling {
+                settleThenHighlight()
+            } else {
+                withAnimation(TidyMotion.color) { isHovered = true }
+            }
+        }
+    }
+}
+
+private final class HoverTracker {
+    var isInside = false
+    var generation = 0
+}
+
+/// 记下最近一次滚动的时间，让列表的行知道"现在是在滚动，不是用户把鼠标停在我上面"。
+/// 双指滑动松手后的惯性部分也算滚动。
+enum ScrollActivity {
+    private static var lastScroll = Date.distantPast
+    private static var monitor: Any?
+
+    static var isScrolling: Bool {
+        Date().timeIntervalSince(lastScroll) < 0.15
+    }
+
+    static func startMonitoring() {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+            lastScroll = Date()
+            return event
+        }
     }
 }
 
