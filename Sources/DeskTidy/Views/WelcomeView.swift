@@ -17,10 +17,7 @@ struct WelcomeView: View {
                     .frame(width: 52, height: 52)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(AppInfo.displayName)已经在运行")
-                        .font(.title3.weight(.semibold))
                     Text("一键收起暂时不用的应用，让桌面清爽")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -31,14 +28,9 @@ struct WelcomeView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("菜单栏里找不到星星？")
-                    .font(.callout.weight(.semibold))
                 Text("菜单栏放不下时，macOS 会把新装应用的图标藏起来。可以按上面的快捷键，或在「应用程序」里再打开一次 DeskTidy，面板会出现在屏幕右上角。")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("想让星星一直看得见：按住 ⌘ 键，把它拖到菜单栏更靠右的位置。")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -64,7 +56,6 @@ struct WelcomeView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
             Text(text)
-                .font(.callout)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

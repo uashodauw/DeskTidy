@@ -15,7 +15,6 @@ struct SceneEditorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("场景")
-                .font(.callout)
 
             ForEach(scenes.scenes) { scene in
                 SceneNameRow(
@@ -36,7 +35,6 @@ struct SceneEditorView: View {
                 HStack(spacing: 6) {
                     TextField("新场景名字", text: $newName)
                         .textFieldStyle(.roundedBorder)
-                        .controlSize(.small)
                         .onSubmit(add)
                     Button("添加", action: add)
                         .buttonStyle(TidyButtonStyle())
@@ -46,8 +44,7 @@ struct SceneEditorView: View {
             }
 
             Text(hint)
-                .font(.caption2)
-                .foregroundStyle(problem == nil ? AnyShapeStyle(HierarchicalShapeStyle.secondary) : AnyShapeStyle(Color.red))
+                .foregroundStyle(problem == nil ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(Color.red))
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
         }
@@ -117,7 +114,6 @@ private struct SceneNameRow: View {
         HStack(spacing: 6) {
             TextField("场景名字", text: $draft)
                 .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
                 .focused($isFocused)
                 .onSubmit(commit)
                 .onChange(of: isFocused) { focused in
@@ -131,7 +127,6 @@ private struct SceneNameRow: View {
                 Button(action: onDelete) {
                     if isConfirmingDelete {
                         Text("删除")
-                            .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.red)
                     } else {
                         Image(systemName: "trash")

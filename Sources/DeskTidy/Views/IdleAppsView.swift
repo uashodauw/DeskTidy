@@ -20,11 +20,8 @@ struct IdleAppsView: View {
             HStack(spacing: 8) {
                 WindowCloseButton(action: onDismiss)
                 Text("这些应用很久没用了")
-                    .font(.headline)
             }
             Text("超过 \(threshold.shortLabel)没用过。勾选想退出的应用，有没保存的内容时它会先问你。")
-                .font(.callout)
-                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             ScrollView {
@@ -45,8 +42,6 @@ struct IdleAppsView: View {
                             Spacer()
                             if let date = lastUsed(app) {
                                 Text(RelativeTime.describe(date))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
                             }
                         }
                         .frame(height: rowHeight)
