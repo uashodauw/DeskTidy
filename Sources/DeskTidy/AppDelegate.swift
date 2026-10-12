@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let idleApps = GlassWindowPresenter(placement: .topRight)
     private let welcome = GlassWindowPresenter(placement: .center)
     private let focus = FocusModel()
+    private lazy var focusCoordinator = FocusCoordinator(focus: focus)
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -46,8 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusItem = item
 
-        focus.onChange = { [weak self] in self?.updateStatusIcon() }
-        focus.onEvent = { [weak self] event in self?.focusPhaseEnded(event) }
+        focus.onChange = { [weak self] in
+            self?.updateStatusIcon()
+            self?.focusCoordinator.refresh()
+        }
+        focus.onEvent = { [weak self] event in self?.focusCoordinator.phaseEnded(event) }
 
         KeyboardShortcuts.onKeyUp(for: .cleanDesktop) { [weak self] in
             self?.performClean()
@@ -75,10 +79,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startFocus() {
         panel?.close()
         focus.startFocus()
-    }
-
-    private func focusPhaseEnded(_ event: FocusTimer.Event) {
-        NSSound(named: "Glass")?.play()
     }
 
     /// 计时中菜单栏显示进度圆环，没在计时就是平时的星星

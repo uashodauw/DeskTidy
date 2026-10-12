@@ -7,6 +7,8 @@ import DeskTidyCore
 final class FocusModel: ObservableObject {
     @Published private(set) var timer: FocusTimer
     @Published private(set) var now = Date()
+    /// 每到点一次加一：小时钟看到它变了，就轻轻跳一下引起注意
+    @Published private(set) var attentionCount = 0
 
     /// 一段到点了（专注结束 / 休息结束）
     var onEvent: ((FocusTimer.Event) -> Void)?
@@ -36,6 +38,11 @@ final class FocusModel: ObservableObject {
     var remainingText: String { FocusClockText.format(remaining) }
 
     var focusMinutes: Int { Int(timer.durations.focus / 60) }
+    var nextBreakMinutes: Int { Int(timer.durations.length(of: timer.nextBreakPhase) / 60) }
+
+    func requestAttention() {
+        attentionCount += 1
+    }
 
     func setDurations(_ durations: FocusDurations) {
         timer.durations = durations
