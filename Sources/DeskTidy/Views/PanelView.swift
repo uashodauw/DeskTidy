@@ -44,7 +44,7 @@ struct PanelView: View {
                 Spacer()
                 Text("v\(AppInfo.version)")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
 
             currentAppRow
@@ -99,7 +99,7 @@ struct PanelView: View {
                     .lineLimit(1)
             } else {
                 Text("未知")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.callout)
@@ -155,7 +155,7 @@ struct PanelView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("点一下叫回来")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                     appList(hiddenApps) { app in
                         Button {
                             onBringBack(app)
@@ -194,13 +194,13 @@ struct PanelView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(runningAppsHint)
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2, reservesSpace: true)
                         .contentTransition(.opacity)
                     if runningApps.apps.isEmpty {
                         Text("没有其他正在运行的应用")
                             .font(.callout)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                     } else {
                         appList(runningAppsByRecentUse) { app in
                             HoverRow { isHovered in
@@ -248,7 +248,7 @@ struct PanelView: View {
                 if let lastUsed = lastUsedText(for: app) {
                     Text(lastUsed)
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .opacity(showsQuit ? 0 : 1)
                 }
                 if QuitRules.canQuitFromPanel(app) {

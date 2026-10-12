@@ -46,7 +46,7 @@ struct IdleAppsView: View {
                             if let date = lastUsed(app) {
                                 Text(RelativeTime.describe(date))
                                     .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .frame(height: rowHeight)

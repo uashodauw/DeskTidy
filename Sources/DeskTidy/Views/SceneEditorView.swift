@@ -47,7 +47,7 @@ struct SceneEditorView: View {
 
             Text(hint)
                 .font(.caption2)
-                .foregroundStyle(problem == nil ? AnyShapeStyle(HierarchicalShapeStyle.tertiary) : AnyShapeStyle(Color.red))
+                .foregroundStyle(problem == nil ? AnyShapeStyle(HierarchicalShapeStyle.secondary) : AnyShapeStyle(Color.red))
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
         }
