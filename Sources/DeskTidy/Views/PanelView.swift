@@ -29,6 +29,8 @@ struct PanelView: View {
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 156
+    /// 设置项越加越多，全部摊开会比面板窗口还高，底边被切掉；超过这个高度就在区域里滚动
+    private let maxSettingsHeight: CGFloat = 280
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -269,52 +271,60 @@ struct PanelView: View {
         Group {
             sectionHeader("设置", detail: "", section: .settings)
             if expanded == .settings {
-                VStack(alignment: .leading, spacing: 10) {
-                    SceneEditorView(scenes: scenes)
-
-                    Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-
-                    if settings.soundEnabled && !settings.availableCleanSounds.isEmpty {
-                        settingPicker(
-                            "提示音（选中即试听）",
-                            selection: $settings.cleanSound,
-                            options: settings.availableCleanSounds,
-                            label: \.label
-                        )
-                        .transition(.opacity)
-                    }
-
-                    settingPicker("多久没用算很久", selection: $settings.idleThreshold, options: IdleThreshold.allCases, label: \.label)
-
-                    settingPicker(
-                        "很久没用的提醒",
-                        selection: $settings.idleReminderFrequency,
-                        options: IdleReminderFrequency.allCases,
-                        label: \.label
-                    )
-
-                    HStack {
-                        Text("清理快捷键")
-                            .font(.callout)
-                        Spacer()
-                        KeyboardShortcuts.Recorder(for: .cleanDesktop)
-                            .controlSize(.small)
-                    }
-
-                    HStack {
-                        Text("打开面板快捷键")
-                            .font(.callout)
-                        Spacer()
-                        KeyboardShortcuts.Recorder(for: .togglePanel)
-                            .controlSize(.small)
-                    }
+                CappedScrollView(maxHeight: maxSettingsHeight) {
+                    settingsContent
                 }
-                .padding(.vertical, 4)
                 .transition(sectionTransition)
             }
         }
+    }
+
+    private var settingsContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SceneEditorView(scenes: scenes)
+
+            Toggle("清理时播放提示音", isOn: $settings.soundEnabled)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+
+            if settings.soundEnabled && !settings.availableCleanSounds.isEmpty {
+                settingPicker(
+                    "提示音（选中即试听）",
+                    selection: $settings.cleanSound,
+                    options: settings.availableCleanSounds,
+                    label: \.label
+                )
+                .transition(.opacity)
+            }
+
+            settingPicker("多久没用算很久", selection: $settings.idleThreshold, options: IdleThreshold.allCases, label: \.label)
+
+            settingPicker(
+                "很久没用的提醒",
+                selection: $settings.idleReminderFrequency,
+                options: IdleReminderFrequency.allCases,
+                label: \.label
+            )
+
+            HStack {
+                Text("清理快捷键")
+                    .font(.callout)
+                Spacer()
+                KeyboardShortcuts.Recorder(for: .cleanDesktop)
+                    .controlSize(.small)
+            }
+
+            HStack {
+                Text("打开面板快捷键")
+                    .font(.callout)
+                Spacer()
+                KeyboardShortcuts.Recorder(for: .togglePanel)
+                    .controlSize(.small)
+            }
+        }
+        .padding(.vertical, 4)
+        // 给右边浮出来的滚动条留位置
+        .padding(.trailing, 10)
     }
 
     private func settingPicker<Option: Hashable & Identifiable>(
@@ -385,6 +395,36 @@ struct PanelView: View {
 
 /// 列表里的一行：鼠标移上去有淡淡的高亮，让人知道这一行可以点。
 /// 把"鼠标在不在这一行上"交给内容，内容可以据此显示额外的按钮（比如退出）。
+/// 内容不高时和普通的一列一样高；超过 maxHeight 就停在 maxHeight，多出来的在里面滚动。
+/// ScrollView 自己不会按内容决定高度，所以先量出内容有多高。
+private struct CappedScrollView<Content: View>: View {
+    let maxHeight: CGFloat
+    @ViewBuilder let content: Content
+
+    @State private var contentHeight: CGFloat?
+
+    var body: some View {
+        ScrollView(.vertical) {
+            content
+                .background(GeometryReader { proxy in
+                    Color.clear.preference(key: ContentHeightKey.self, value: proxy.size.height)
+                })
+        }
+        .frame(height: min(contentHeight ?? maxHeight, maxHeight))
+        .onPreferenceChange(ContentHeightKey.self) { height in
+            contentHeight = height
+        }
+    }
+}
+
+private struct ContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 private struct HoverRow<Content: View>: View {
     @ViewBuilder let content: (Bool) -> Content
 
