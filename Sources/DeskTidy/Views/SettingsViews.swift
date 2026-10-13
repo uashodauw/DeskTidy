@@ -351,7 +351,8 @@ extension TitleColor {
         var green: CGFloat = 0
         var blue: CGFloat = 0
         var alpha: CGFloat = 0
-        guard rgb.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return nil }
+        // 已经换成 sRGB。Mac 上这个方法没有返回值，不能放进 guard。
+        rgb.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         self.init(red: Double(red), green: Double(green), blue: Double(blue))
     }
 }
