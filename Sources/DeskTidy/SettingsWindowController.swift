@@ -133,6 +133,19 @@ final class SettingsWindow: NSWindow {
         onClose?()
     }
 
+    /// 空白处按住可以拖动窗口。圆盘和明暗条如果等系统把事件分下来，窗口会先把这次拖走。
+    /// 所以在窗口收到按下的时候就先找它们，找到就自己跟手，这次不再交给「拖动窗口」。
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown, let content = contentView {
+            let point = content.convert(event.locationInWindow, from: nil)
+            if let drag = HoldDragView.hit(in: content, point: point) {
+                drag.beginTracking(with: event)
+                return
+            }
+        }
+        super.sendEvent(event)
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
               let key = event.charactersIgnoringModifiers?.lowercased() else {

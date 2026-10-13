@@ -370,6 +370,7 @@ private struct StyleColorDisc: View {
                     if hue < 0 { hue += 1 }
                     color = TitleColor(hue: hue, saturation: distance / radius, brightness: color.brightness)
                 }
+                .frame(width: diameter, height: diameter)
             }
             .frame(width: diameter, height: diameter)
             brightnessBar
@@ -465,13 +466,14 @@ private struct StyleColorDisc: View {
                 guard next.hex != color.hex else { return }
                 color = next
             }
+            .frame(width: diameter, height: thumb)
         }
         .frame(width: diameter, height: thumb)
     }
 }
 
 /// 按住鼠标左键拖动时持续报告位置。点一下也能选定。
-/// 设置窗口的空白处可以拖着窗口走，系统的拖动手势会被它抢走，所以圆盘和滑杆在这里自己接。
+/// 必须占满圆盘或明暗条：没有尺寸时点不到它，事件会落到窗口上，窗口就把拖动当成移动窗口。
 private struct HoldDragArea: NSViewRepresentable {
     var onDrag: (CGPoint) -> Void
 
@@ -484,21 +486,25 @@ private struct HoldDragArea: NSViewRepresentable {
     func updateNSView(_ view: HoldDragView, context: Context) {
         view.onDrag = onDrag
     }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: HoldDragView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions(by: CGSize(width: 116, height: 16))
+    }
 }
 
-private final class HoldDragView: NSView {
+/// 圆盘和明暗条的鼠标层。设置窗口在收到按下时会先来这里找，找到就自己跟手，不把这次拖动交给窗口。
+final class HoldDragView: NSView {
     var onDrag: ((CGPoint) -> Void)?
 
     override var isFlipped: Bool { true }
-
-    /// 默认是 true：设置窗口开了「按住空白处拖动窗口」之后，
-    /// 鼠标按下还能进到这里，一移动系统就改去拖窗口，mouseDragged 不会再来。
-    /// 所以圆点和明暗条都只能点一下跳过去，按住拖不动。
     override var mouseDownCanMoveWindow: Bool { false }
 
     override func mouseDown(with event: NSEvent) {
+        beginTracking(with: event)
+    }
+
+    func beginTracking(with event: NSEvent) {
         report(event)
-        // 按下之后一直跟到松开。不在这里跟的话，事件会回到窗口，窗口把后面的移动当成拖窗口。
         window?.trackEvents(
             matching: [.leftMouseDragged, .leftMouseUp],
             timeout: NSEvent.foreverDuration,
@@ -514,6 +520,21 @@ private final class HoldDragView: NSView {
             }
             self.report(next)
         }
+    }
+
+    /// point 在 root 自己的坐标系里。
+    static func hit(in root: NSView, point: NSPoint) -> HoldDragView? {
+        for subview in root.subviews.reversed() {
+            if subview.isHidden || subview.alphaValue < 0.01 { continue }
+            let local = root.convert(point, to: subview)
+            if let found = hit(in: subview, point: local) {
+                return found
+            }
+            if let drag = subview as? HoldDragView, subview.bounds.insetBy(dx: -2, dy: -2).contains(local) {
+                return drag
+            }
+        }
+        return nil
     }
 
     private func report(_ event: NSEvent) {
