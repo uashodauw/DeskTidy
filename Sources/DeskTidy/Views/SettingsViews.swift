@@ -1,3 +1,4 @@
+import AppKit
 import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
@@ -359,44 +360,50 @@ private struct StyleColorDisc: View {
             ZStack {
                 disc
                 knob
+                // 盖在最上面接住按住拖动。窗口空白处可以拖着走，系统手势会被它抢走，所以这里自己接鼠标。
+                HoldDragArea { point in
+                    let radius = diameter / 2
+                    let dx = Double(point.x) - radius
+                    let dy = Double(point.y) - radius
+                    let distance = min(hypot(dx, dy), radius)
+                    var hue = atan2(dy, dx) / (2 * .pi)
+                    if hue < 0 { hue += 1 }
+                    color = TitleColor(hue: hue, saturation: distance / radius, brightness: color.brightness)
+                }
             }
             .frame(width: diameter, height: diameter)
-            .contentShape(Circle())
-            .gesture(drag)
-            Slider(value: brightness, in: 0...1)
-                .controlSize(.small)
-                .frame(width: diameter)
+            brightnessBar
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("颜色圆盘"))
     }
 
+    /// 整圈都是色相，中间发白是饱和度变低。明暗不画在盘上，盘才一直是彩色的。
     private var disc: some View {
         Canvas { context, size in
             let radius = min(size.width, size.height) / 2
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let steps = 120
+            let steps = 180
             for step in 0..<steps {
                 let start = Double(step) / Double(steps)
                 let end = Double(step + 1) / Double(steps)
                 var path = Path()
                 path.move(to: center)
-                path.addArc(
-                    center: center,
-                    radius: radius,
-                    startAngle: .radians(start * 2 * .pi),
-                    endAngle: .radians(end * 2 * .pi),
-                    clockwise: true
-                )
+                for index in 0...4 {
+                    let angle = (start + (end - start) * Double(index) / 4) * 2 * .pi
+                    path.addLine(to: CGPoint(
+                        x: center.x + CGFloat(cos(angle)) * radius,
+                        y: center.y + CGFloat(sin(angle)) * radius
+                    ))
+                }
                 path.closeSubpath()
-                let wedge = TitleColor(hue: (start + end) / 2, saturation: 1, brightness: color.brightness)
+                let wedge = TitleColor(hue: (start + end) / 2, saturation: 1, brightness: 1)
                 context.fill(path, with: .color(wedge.swiftUI))
             }
-            let centerGray = TitleColor(hue: 0, saturation: 0, brightness: color.brightness).swiftUI
             context.fill(
                 Path(ellipseIn: CGRect(origin: .zero, size: size)),
                 with: .radialGradient(
-                    Gradient(colors: [centerGray, centerGray.opacity(0)]),
+                    Gradient(colors: [Color.white, Color.white.opacity(0)]),
                     center: center,
                     startRadius: 0,
                     endRadius: radius
@@ -404,7 +411,7 @@ private struct StyleColorDisc: View {
             )
         }
         .clipShape(Circle())
-        .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+        .overlay(Circle().strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
     }
 
     private var knob: some View {
@@ -415,6 +422,7 @@ private struct StyleColorDisc: View {
             .overlay(Circle().strokeBorder(Color.black.opacity(0.35), lineWidth: 0.5))
             .shadow(color: .black.opacity(0.3), radius: 1, y: 0.5)
             .position(knobPoint)
+            .allowsHitTesting(false)
     }
 
     private var knobPoint: CGPoint {
@@ -424,28 +432,75 @@ private struct StyleColorDisc: View {
         return CGPoint(x: radius + CGFloat(cos(angle) * distance), y: radius + CGFloat(sin(angle) * distance))
     }
 
-    private var drag: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                let radius = diameter / 2
-                let dx = Double(value.location.x) - radius
-                let dy = Double(value.location.y) - radius
-                let distance = min(hypot(dx, dy), radius)
-                var hue = atan2(dy, dx) / (2 * .pi)
-                if hue < 0 { hue += 1 }
-                color = TitleColor(hue: hue, saturation: distance / radius, brightness: color.brightness)
-            }
-    }
-
-    private var brightness: Binding<Double> {
-        Binding(
-            get: { color.brightness },
-            set: { newValue in
-                let next = TitleColor(hue: color.hue, saturation: color.saturation, brightness: newValue)
+    /// 按住圆钮左右拖，调这一个颜色的明暗。
+    private var brightnessBar: some View {
+        let thumb: CGFloat = 16
+        return ZStack(alignment: .leading) {
+            Capsule()
+                .fill(LinearGradient(
+                    colors: [
+                        TitleColor(hue: color.hue, saturation: color.saturation, brightness: 0).swiftUI,
+                        TitleColor(hue: color.hue, saturation: color.saturation, brightness: 1).swiftUI
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+                .frame(height: 6)
+            Circle()
+                .fill(color.swiftUI)
+                .frame(width: thumb, height: thumb)
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                .overlay(Circle().strokeBorder(Color.black.opacity(0.28), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+                .offset(x: CGFloat(color.brightness) * (diameter - thumb))
+                .allowsHitTesting(false)
+            HoldDragArea { point in
+                let span = Double(diameter - thumb)
+                let value = span > 0 ? (Double(point.x) - Double(thumb) / 2) / span : 0
+                let next = TitleColor(
+                    hue: color.hue,
+                    saturation: color.saturation,
+                    brightness: min(max(value, 0), 1)
+                )
                 guard next.hex != color.hex else { return }
                 color = next
             }
-        )
+        }
+        .frame(width: diameter, height: thumb)
+    }
+}
+
+/// 按住鼠标左键拖动时持续报告位置。点一下也能选定。
+/// 设置窗口的空白处可以拖着窗口走，系统的拖动手势会被它抢走，所以圆盘和滑杆在这里自己接。
+private struct HoldDragArea: NSViewRepresentable {
+    var onDrag: (CGPoint) -> Void
+
+    func makeNSView(context: Context) -> HoldDragView {
+        let view = HoldDragView()
+        view.onDrag = onDrag
+        return view
+    }
+
+    func updateNSView(_ view: HoldDragView, context: Context) {
+        view.onDrag = onDrag
+    }
+}
+
+private final class HoldDragView: NSView {
+    var onDrag: ((CGPoint) -> Void)?
+
+    override var isFlipped: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        report(event)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        report(event)
+    }
+
+    private func report(_ event: NSEvent) {
+        onDrag?(convert(event.locationInWindow, from: nil))
     }
 }
 
