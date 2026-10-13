@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             frontmostApp: frontmostApp,
             cleanup: cleanup,
             scenes: scenes,
+            settings: settings,
             usage: usage,
             focus: focus,
             onStartFocus: { [weak self] in self?.startFocus() },

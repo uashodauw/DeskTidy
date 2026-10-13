@@ -1,3 +1,4 @@
+import AppKit
 import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
@@ -236,6 +237,30 @@ struct CleanSettingsPage: View {
 
     var body: some View {
         SettingsPage {
+            SettingsGroup(header: "面板标题", footer: titleColorFooter) {
+                SettingsRow(
+                    title: "标题颜色",
+                    symbol: "paintbrush.fill",
+                    color: .blue,
+                    showsDivider: settings.titleColorMode == .custom
+                ) {
+                    SettingsMenu(
+                        title: "标题颜色",
+                        selection: $settings.titleColorMode,
+                        options: TitleColorMode.allCases,
+                        label: \.label
+                    )
+                }
+                if settings.titleColorMode == .custom {
+                    SettingsRow(title: "浅色模式", symbol: "sun.max.fill", color: .orange) {
+                        TitleColorWell(title: "浅色模式", color: $settings.titleColorLight)
+                    }
+                    SettingsRow(title: "深色模式", symbol: "moon.fill", color: .indigo, showsDivider: false) {
+                        TitleColorWell(title: "深色模式", color: $settings.titleColorDark)
+                    }
+                }
+            }
+
             SettingsGroup(header: "提示音", footer: "一键清理完成时播放。选一个声音会马上试听。") {
                 SettingsRow(
                     title: "清理时播放提示音",
@@ -283,6 +308,51 @@ struct CleanSettingsPage: View {
 
     private var showsSoundPicker: Bool {
         settings.soundEnabled && !settings.availableCleanSounds.isEmpty
+    }
+
+    private var titleColorFooter: String {
+        if settings.titleColorMode == .followSystem {
+            return "浅色外观用近黑，深色外观用白色，跟着系统换。"
+        }
+        return "系统是浅色时用上面选的颜色，深色时用下面选的颜色。"
+    }
+}
+
+/// 一颗颜色圆点。选中的颜色存成不透明的红绿蓝。
+private struct TitleColorWell: View {
+    let title: String
+    @Binding var color: TitleColor
+
+    var body: some View {
+        ColorPicker(title, selection: selection, supportsOpacity: false)
+            .labelsHidden()
+            .controlSize(.small)
+            .fixedSize()
+    }
+
+    private var selection: Binding<Color> {
+        Binding(
+            get: {
+                Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: 1)
+            },
+            set: { newColor in
+                guard let converted = TitleColor(appKitColor: NSColor(newColor)) else { return }
+                color = converted
+            }
+        )
+    }
+}
+
+extension TitleColor {
+    /// 从颜色选择器拿到的颜色换成红绿蓝。换不成就返回 nil，保留原来的颜色。
+    init?(appKitColor: NSColor) {
+        guard let rgb = appKitColor.usingColorSpace(.sRGB) else { return nil }
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard rgb.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return nil }
+        self.init(red: Double(red), green: Double(green), blue: Double(blue))
     }
 }
 

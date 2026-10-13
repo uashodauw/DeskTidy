@@ -14,6 +14,9 @@ public final class AppSettings {
     static let longBreakMinutesKey = "longBreakMinutes"
     static let breakReminderStyleKey = "breakReminderStyle"
     static let showsFocusClockKey = "showsFocusClock"
+    static let titleColorModeKey = "titleColorMode"
+    static let titleColorLightKey = "titleColorLight"
+    static let titleColorDarkKey = "titleColorDark"
 
     private let defaults: UserDefaults
     /// 有设置读不出来、已经换回默认值时为 true，用来提示用户一次。
@@ -46,6 +49,12 @@ public final class AppSettings {
         if let value = defaults.object(forKey: Self.showsFocusClockKey), value as? Bool == nil {
             discard(Self.showsFocusClockKey)
         }
+        if let value = defaults.object(forKey: Self.titleColorModeKey),
+           (value as? String).flatMap(TitleColorMode.init(rawValue:)) == nil {
+            discard(Self.titleColorModeKey)
+        }
+        discardUnlessHex(Self.titleColorLightKey)
+        discardUnlessHex(Self.titleColorDarkKey)
         // 上次提醒时间坏了不值得打扰用户，悄悄删掉即可，最多就是多提醒一次
         if let value = defaults.object(forKey: Self.idleReminderLastShownKey), value as? Double == nil {
             defaults.removeObject(forKey: Self.idleReminderLastShownKey)
@@ -150,9 +159,40 @@ public final class AppSettings {
         set { defaults.set(newValue, forKey: Self.showsFocusClockKey) }
     }
 
+    /// 面板标题用设计好的两种颜色跟着系统换，还是用用户自己选的。没设置过时跟随系统。
+    public var titleColorMode: TitleColorMode {
+        get {
+            (defaults.object(forKey: Self.titleColorModeKey) as? String).flatMap(TitleColorMode.init(rawValue:))
+                ?? .followSystem
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.titleColorModeKey) }
+    }
+
+    /// 自定义时，浅色外观用的标题颜色。没设置过时是设计好的近黑。
+    public var titleColorLight: TitleColor {
+        get { storedTitleColor(Self.titleColorLightKey) ?? .lightAppearance }
+        set { defaults.set(newValue.hex, forKey: Self.titleColorLightKey) }
+    }
+
+    /// 自定义时，深色外观用的标题颜色。没设置过时是设计好的纯白。
+    public var titleColorDark: TitleColor {
+        get { storedTitleColor(Self.titleColorDarkKey) ?? .darkAppearance }
+        set { defaults.set(newValue.hex, forKey: Self.titleColorDarkKey) }
+    }
+
     private func minutes(for key: String, allowed: [Int], default defaultValue: Int) -> Int {
         guard let value = defaults.object(forKey: key) as? Int, allowed.contains(value) else { return defaultValue }
         return value
+    }
+
+    private func storedTitleColor(_ key: String) -> TitleColor? {
+        (defaults.object(forKey: key) as? String).flatMap(TitleColor.init(hex:))
+    }
+
+    private func discardUnlessHex(_ key: String) {
+        guard let value = defaults.object(forKey: key) else { return }
+        if let hex = value as? String, TitleColor(hex: hex) != nil { return }
+        discard(key)
     }
 
     private func discardUnlessAllowed(_ key: String, _ allowed: [Int]) {

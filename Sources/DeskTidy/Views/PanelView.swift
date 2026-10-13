@@ -7,6 +7,7 @@ struct PanelView: View {
     @ObservedObject var frontmostApp: FrontmostAppModel
     @ObservedObject var cleanup: CleanupController
     @ObservedObject var scenes: SceneModel
+    @ObservedObject var settings: SettingsModel
     let usage: UsageModel
     /// 不用 @ObservedObject：计时中每秒都在变，只让专注那一行订阅，整个面板不跟着每秒重画
     let focus: FocusModel
@@ -31,16 +32,25 @@ struct PanelView: View {
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 156
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// 浅色近黑、深色纯白，或设置里自定义的两种颜色。明确的不透明色，玻璃不会把笔画掺淡。
+    private var titleColor: Color {
+        let chosen = TitleColor.resolved(
+            mode: settings.titleColorMode,
+            isDarkAppearance: colorScheme == .dark,
+            customLight: settings.titleColorLight,
+            customDark: settings.titleColorDark
+        )
+        return Color(.sRGB, red: chosen.red, green: chosen.green, blue: chosen.blue, opacity: 1)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                // 明确指定纯白：用 .primary 这类系统颜色时，玻璃会让文字和背景"融合"，边缘发虚。
-                // 阴影不能模糊（radius 0）：只往下错开 1 点，让白字在浅色玻璃上也看得清，边缘依然锐利。
                 Label(AppInfo.brandName, systemImage: "sparkles")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .shadow(color: .black.opacity(0.35), radius: 0, x: 0, y: 1)
+                    .foregroundStyle(titleColor)
                 Spacer()
                 Text("v\(AppInfo.version)")
                     .font(.caption)

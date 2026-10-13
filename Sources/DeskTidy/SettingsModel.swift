@@ -54,6 +54,19 @@ final class SettingsModel: ObservableObject {
         didSet { settings.showsFocusClock = showsFocusClock; onFocusSettingsChange?() }
     }
 
+    /// 面板标题的颜色：跟随系统，或使用下面两种自定义颜色
+    @Published var titleColorMode: TitleColorMode {
+        didSet { settings.titleColorMode = titleColorMode }
+    }
+
+    @Published var titleColorLight: TitleColor {
+        didSet { settings.titleColorLight = titleColorLight }
+    }
+
+    @Published var titleColorDark: TitleColor {
+        didSet { settings.titleColorDark = titleColorDark }
+    }
+
     var focusDurations: FocusDurations { settings.focusDurations }
 
     private var idleReminderShownThisLaunch = false
@@ -71,6 +84,9 @@ final class SettingsModel: ObservableObject {
         longBreakMinutes = settings.longBreakMinutes
         breakReminderStyle = settings.breakReminderStyle
         showsFocusClock = settings.showsFocusClock
+        titleColorMode = settings.titleColorMode
+        titleColorLight = settings.titleColorLight
+        titleColorDark = settings.titleColorDark
         loadCleanSound()
     }
 
