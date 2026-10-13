@@ -42,7 +42,8 @@ struct PanelView: View {
             customLight: settings.titleColorLight,
             customDark: settings.titleColorDark
         )
-        return Color(.sRGB, red: chosen.red, green: chosen.green, blue: chosen.blue, opacity: 1)
+        // 不带色彩空间的这个写法 macOS 13 就有。Color(.sRGB, …) 要 macOS 14，最低系统是 13，会编译失败。
+        return Color(red: chosen.red, green: chosen.green, blue: chosen.blue, opacity: 1)
     }
 
     var body: some View {

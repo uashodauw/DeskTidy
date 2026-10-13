@@ -333,7 +333,7 @@ private struct TitleColorWell: View {
     private var selection: Binding<Color> {
         Binding(
             get: {
-                Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: 1)
+                Color(red: color.red, green: color.green, blue: color.blue, opacity: 1)
             },
             set: { newColor in
                 guard let converted = TitleColor(appKitColor: NSColor(newColor)) else { return }
@@ -346,7 +346,7 @@ private struct TitleColorWell: View {
 extension TitleColor {
     /// 从颜色选择器拿到的颜色换成红绿蓝。换不成就返回 nil，保留原来的颜色。
     init?(appKitColor: NSColor) {
-        guard let rgb = appKitColor.usingColorSpace(.sRGB) else { return nil }
+        guard let rgb = appKitColor.usingColorSpace(NSColorSpace.sRGB) else { return nil }
         var red: CGFloat = 0
         var green: CGFloat = 0
         var blue: CGFloat = 0
