@@ -491,12 +491,29 @@ private final class HoldDragView: NSView {
 
     override var isFlipped: Bool { true }
 
+    /// 默认是 true：设置窗口开了「按住空白处拖动窗口」之后，
+    /// 鼠标按下还能进到这里，一移动系统就改去拖窗口，mouseDragged 不会再来。
+    /// 所以圆点和明暗条都只能点一下跳过去，按住拖不动。
+    override var mouseDownCanMoveWindow: Bool { false }
+
     override func mouseDown(with event: NSEvent) {
         report(event)
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        report(event)
+        // 按下之后一直跟到松开。不在这里跟的话，事件会回到窗口，窗口把后面的移动当成拖窗口。
+        window?.trackEvents(
+            matching: [.leftMouseDragged, .leftMouseUp],
+            timeout: NSEvent.foreverDuration,
+            mode: .eventTracking
+        ) { next, stop in
+            guard let next else {
+                stop.pointee = true
+                return
+            }
+            if next.type == .leftMouseUp {
+                stop.pointee = true
+                return
+            }
+            self.report(next)
+        }
     }
 
     private func report(_ event: NSEvent) {
