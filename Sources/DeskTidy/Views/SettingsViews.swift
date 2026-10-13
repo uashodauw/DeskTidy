@@ -211,6 +211,8 @@ struct SettingsRootView: View {
                         .clipped()
                         .allowsHitTesting(item == tab)
                         .accessibilityHidden(item != tab)
+                        // 藏起来的那一页圆盘还在树里，不能再去接鼠标，不然会挡到当前这一页
+                        .environment(\.colorDragEnabled, item == tab)
                 }
             }
         }
@@ -246,8 +248,8 @@ struct CleanSettingsPage: View {
                         .labelsHidden()
                 }
                 HStack(alignment: .top, spacing: 28) {
-                    StyleColorColumn(title: "浅色", color: lightColor, isCurrent: !systemIsDark)
-                    StyleColorColumn(title: "深色", color: darkColor, isCurrent: systemIsDark)
+                    StyleColorColumn(id: "light", title: "浅色", color: lightColor, isCurrent: !systemIsDark)
+                    StyleColorColumn(id: "dark", title: "深色", color: darkColor, isCurrent: systemIsDark)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 6)
@@ -337,6 +339,7 @@ struct CleanSettingsPage: View {
 
 /// 一个外观圆盘：直接在盘上选，选中的颜色马上写进设置。
 private struct StyleColorColumn: View {
+    let id: String
     let title: String
     @Binding var color: TitleColor
     var isCurrent: Bool
@@ -346,12 +349,13 @@ private struct StyleColorColumn: View {
             Text(isCurrent ? "\(title) · 使用中" : title)
                 .font(.caption)
                 .foregroundStyle(isCurrent ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
-            StyleColorDisc(color: $color)
+            StyleColorDisc(columnID: id, color: $color)
         }
     }
 }
 
 private struct StyleColorDisc: View {
+    let columnID: String
     @Binding var color: TitleColor
     private let diameter: CGFloat = 116
 
@@ -360,8 +364,8 @@ private struct StyleColorDisc: View {
             ZStack {
                 disc
                 knob
-                // 盖在最上面接住按住拖动。窗口空白处可以拖着走，系统手势会被它抢走，所以这里自己接鼠标。
-                HoldDragArea { point in
+                // 只负责把这块的位置告诉窗口。真正的按住拖动由窗口在「开始拖窗口」之前接走。
+                ColorDragPad(id: "\(columnID)-disc") { point in
                     let radius = diameter / 2
                     let dx = Double(point.x) - radius
                     let dy = Double(point.y) - radius
@@ -455,7 +459,7 @@ private struct StyleColorDisc: View {
                 .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
                 .offset(x: CGFloat(color.brightness) * (diameter - thumb))
                 .allowsHitTesting(false)
-            HoldDragArea { point in
+            ColorDragPad(id: "\(columnID)-brightness") { point in
                 let span = Double(diameter - thumb)
                 let value = span > 0 ? (Double(point.x) - Double(thumb) / 2) / span : 0
                 let next = TitleColor(
@@ -472,73 +476,100 @@ private struct StyleColorDisc: View {
     }
 }
 
-/// 按住鼠标左键拖动时持续报告位置。点一下也能选定。
-/// 必须占满圆盘或明暗条：没有尺寸时点不到它，事件会落到窗口上，窗口就把拖动当成移动窗口。
-private struct HoldDragArea: NSViewRepresentable {
-    var onDrag: (CGPoint) -> Void
+/// 设置窗口内容的坐标名。圆盘报上来的矩形用的就是这套坐标，和窗口里的鼠标位置对得上。
+enum ColorDragSpace {
+    static let name = "settingsWindow"
+}
 
-    func makeNSView(context: Context) -> HoldDragView {
-        let view = HoldDragView()
-        view.onDrag = onDrag
-        return view
-    }
+private struct ColorDragEnabledKey: EnvironmentKey {
+    static let defaultValue = true
+}
 
-    func updateNSView(_ view: HoldDragView, context: Context) {
-        view.onDrag = onDrag
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView: HoldDragView, context: Context) -> CGSize? {
-        proposal.replacingUnspecifiedDimensions(by: CGSize(width: 116, height: 16))
+extension EnvironmentValues {
+    /// 当前这一页是不是正在显示。藏起来的圆盘不能再占用拖动。
+    var colorDragEnabled: Bool {
+        get { self[ColorDragEnabledKey.self] }
+        set { self[ColorDragEnabledKey.self] = newValue }
     }
 }
 
-/// 圆盘和明暗条的鼠标层。设置窗口在收到按下时会先来这里找，找到就自己跟手，不把这次拖动交给窗口。
-final class HoldDragView: NSView {
-    var onDrag: ((CGPoint) -> Void)?
+/// 一次能接住的拖动：矩形是窗口内容坐标（左上角为原点，y 向下），回调里的点是这块里面的位置。
+struct ColorDragHit {
+    var rect: CGRect
+    var onDrag: (CGPoint) -> Void
+}
 
-    override var isFlipped: Bool { true }
-    override var mouseDownCanMoveWindow: Bool { false }
+/// 圆盘和明暗条的位置。窗口收到鼠标时来这里查，不靠 AppKit 子视图——那一层经常没有尺寸，点上去会落到窗口上。
+final class ColorDragRegistry {
+    static let shared = ColorDragRegistry()
 
-    override func mouseDown(with event: NSEvent) {
-        beginTracking(with: event)
+    private var frames: [String: CGRect] = [:]
+    private var callbacks: [String: (CGPoint) -> Void] = [:]
+
+    func setCallback(id: String, onDrag: @escaping (CGPoint) -> Void) {
+        callbacks[id] = onDrag
     }
 
-    func beginTracking(with event: NSEvent) {
-        report(event)
-        window?.trackEvents(
-            matching: [.leftMouseDragged, .leftMouseUp],
-            timeout: NSEvent.foreverDuration,
-            mode: .eventTracking
-        ) { next, stop in
-            guard let next else {
-                stop.pointee = true
-                return
-            }
-            if next.type == .leftMouseUp {
-                stop.pointee = true
-                return
-            }
-            self.report(next)
+    func setFrame(id: String, rect: CGRect) {
+        frames[id] = rect
+    }
+
+    func clearFrame(id: String) {
+        frames[id] = nil
+    }
+
+    func remove(id: String) {
+        frames[id] = nil
+        callbacks[id] = nil
+    }
+
+    /// 点落在哪一块上。叠在一起时用面积小的那块（明暗条比圆盘小）。
+    func hit(at point: CGPoint) -> ColorDragHit? {
+        var best: (area: CGFloat, hit: ColorDragHit)?
+        for (id, rect) in frames {
+            guard let onDrag = callbacks[id] else { continue }
+            let slop = rect.insetBy(dx: -3, dy: -4)
+            guard slop.contains(point) else { continue }
+            let area = rect.width * rect.height
+            if let best, area >= best.area { continue }
+            best = (area, ColorDragHit(rect: rect, onDrag: onDrag))
         }
+        return best?.hit
     }
+}
 
-    /// point 在 root 自己的坐标系里。
-    static func hit(in root: NSView, point: NSPoint) -> HoldDragView? {
-        for subview in root.subviews.reversed() {
-            if subview.isHidden || subview.alphaValue < 0.01 { continue }
-            let local = root.convert(point, to: subview)
-            if let found = hit(in: subview, point: local) {
-                return found
-            }
-            if let drag = subview as? HoldDragView, subview.bounds.insetBy(dx: -2, dy: -2).contains(local) {
-                return drag
+private struct ColorDragFramesKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// 铺在圆盘或明暗条上，把真实位置登记给窗口。自己不接鼠标，避免和窗口抢一遍又漏一遍。
+/// 用排版结果而不是 onAppear：第一次出现时尺寸经常还是 0，位置要等这一帧排完才准。
+private struct ColorDragPad: View {
+    let id: String
+    var onDrag: (CGPoint) -> Void
+    @Environment(\.colorDragEnabled) private var enabled
+
+    var body: some View {
+        GeometryReader { geo in
+            let frame = geo.frame(in: .named(ColorDragSpace.name))
+            let reported: [String: CGRect] = (enabled && frame.width > 8 && frame.height > 8) ? [id: frame] : [:]
+            Color.clear
+                .allowsHitTesting(false)
+                .preference(key: ColorDragFramesKey.self, value: reported)
+        }
+        .allowsHitTesting(false)
+        .onPreferenceChange(ColorDragFramesKey.self) { frames in
+            ColorDragRegistry.shared.setCallback(id: id, onDrag: onDrag)
+            if let frame = frames[id] {
+                ColorDragRegistry.shared.setFrame(id: id, rect: frame)
+            } else {
+                ColorDragRegistry.shared.clearFrame(id: id)
             }
         }
-        return nil
-    }
-
-    private func report(_ event: NSEvent) {
-        onDrag?(convert(event.locationInWindow, from: nil))
+        .onDisappear { ColorDragRegistry.shared.remove(id: id) }
     }
 }
 

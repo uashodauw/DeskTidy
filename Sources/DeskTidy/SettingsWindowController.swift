@@ -93,10 +93,27 @@ final class SettingsWindowController: NSObject {
             .background { SettingsShadow(cornerRadius: Self.cornerRadius) }
             .padding(Self.shadowMargin)
             .frame(width: Self.windowSize.width, height: Self.windowSize.height, alignment: .top)
-        let host = NSHostingView(rootView: root)
+            // 圆盘报位置用这套坐标，必须和窗口内容视图是同一块区域
+            .coordinateSpace(name: ColorDragSpace.name)
+        let host = SettingsHostingView(rootView: root)
         host.sizingOptions = []
         window.contentView = host
         return window
+    }
+}
+
+/// 点在圆盘或明暗条上时，这次按下不能拿去拖窗口。空白处仍用系统默认，可以拖动窗口。
+final class SettingsHostingView<Content: View>: NSHostingView<Content> {
+    override var mouseDownCanMoveWindow: Bool {
+        guard let event = window?.currentEvent else { return super.mouseDownCanMoveWindow }
+        switch event.type {
+        case .leftMouseDown, .leftMouseDragged:
+            let point = convert(event.locationInWindow, from: nil)
+            if ColorDragRegistry.shared.hit(at: point) != nil { return false }
+        default:
+            break
+        }
+        return super.mouseDownCanMoveWindow
     }
 }
 
@@ -125,6 +142,8 @@ struct SettingsShadow: View {
 /// DeskTidy 没有菜单栏菜单，系统就不知道 ⌘C、⌘V 这些快捷键该做什么，在这里自己接住；⌘W 和 esc 关闭窗口。
 final class SettingsWindow: NSWindow {
     var onClose: (() -> Void)?
+    /// 正在跟手选颜色。这段时间再进来的鼠标事件不能交给「拖动窗口」。
+    private var isTrackingColor = false
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -133,17 +152,55 @@ final class SettingsWindow: NSWindow {
         onClose?()
     }
 
-    /// 空白处按住可以拖动窗口。圆盘和明暗条如果等系统把事件分下来，窗口会先把这次拖走。
-    /// 所以在窗口收到按下的时候就先找它们，找到就自己跟手，这次不再交给「拖动窗口」。
+    /// 空白处按住仍然拖窗口。圆盘和明暗条用的是界面排出来的真实位置。
+    /// 对上了就不调用 super：拖动窗口是在 super 里开始的。
     override func sendEvent(_ event: NSEvent) {
+        if isTrackingColor {
+            switch event.type {
+            case .leftMouseDown, .leftMouseDragged, .leftMouseUp:
+                return
+            default:
+                break
+            }
+        }
         if event.type == .leftMouseDown, let content = contentView {
             let point = content.convert(event.locationInWindow, from: nil)
-            if let drag = HoldDragView.hit(in: content, point: point) {
-                drag.beginTracking(with: event)
+            if let hit = ColorDragRegistry.shared.hit(at: point) {
+                trackColor(hit, from: point, in: content)
                 return
             }
         }
         super.sendEvent(event)
+    }
+
+    private func trackColor(_ hit: ColorDragHit, from point: CGPoint, in content: NSView) {
+        isTrackingColor = true
+        let wasMovable = isMovableByWindowBackground
+        isMovableByWindowBackground = false
+        deliver(point, to: hit)
+        trackEvents(
+            matching: [.leftMouseDragged, .leftMouseUp],
+            timeout: NSEvent.foreverDuration,
+            mode: .eventTracking
+        ) { next, stop in
+            guard let next else {
+                stop.pointee = true
+                return
+            }
+            if next.type == .leftMouseUp {
+                stop.pointee = true
+                return
+            }
+            let moved = content.convert(next.locationInWindow, from: nil)
+            self.deliver(moved, to: hit)
+        }
+        isMovableByWindowBackground = wasMovable
+        isTrackingColor = false
+    }
+
+    private func deliver(_ point: CGPoint, to hit: ColorDragHit) {
+        let local = CGPoint(x: point.x - hit.rect.minX, y: point.y - hit.rect.minY)
+        hit.onDrag(local)
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
