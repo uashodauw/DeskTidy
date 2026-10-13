@@ -1,4 +1,3 @@
-import AppKit
 import KeyboardShortcuts
 import SwiftUI
 import DeskTidyCore
@@ -215,7 +214,7 @@ struct SettingsRootView: View {
             }
         }
         .frame(width: settingsPageWidth)
-        .tidyWindowGlass(cornerRadius: SettingsWindowController.cornerRadius)
+        .modifier(PluginStyle(settings: settings, cornerRadius: SettingsWindowController.cornerRadius))
     }
 
     /// 四页一直都在（只是看不见）：每次切换才新建的话，系统控件要晚一拍才画出来，看起来会闪
@@ -234,31 +233,24 @@ struct SettingsRootView: View {
 
 struct CleanSettingsPage: View {
     @ObservedObject var settings: SettingsModel
+    @Environment(\.systemIsDark) private var systemIsDark
 
     var body: some View {
         SettingsPage {
-            SettingsGroup(header: "面板标题", footer: titleColorFooter) {
-                SettingsRow(
-                    title: "标题颜色",
-                    symbol: "paintbrush.fill",
-                    color: .blue,
-                    showsDivider: settings.titleColorMode == .custom
-                ) {
-                    SettingsMenu(
-                        title: "标题颜色",
-                        selection: $settings.titleColorMode,
-                        options: TitleColorMode.allCases,
-                        label: \.label
-                    )
+            SettingsGroup(header: "外观", footer: "打开面板、设置这些窗口时用这套颜色。在圆盘上选好就马上换成自选，不用再点颜色框。") {
+                SettingsRow(title: "跟随系统", symbol: "circle.lefthalf.filled", color: .gray, showsDivider: false) {
+                    Toggle("跟随系统", isOn: followsSystem)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
                 }
-                if settings.titleColorMode == .custom {
-                    SettingsRow(title: "浅色模式", symbol: "sun.max.fill", color: .orange) {
-                        TitleColorWell(title: "浅色模式", color: $settings.titleColorLight)
-                    }
-                    SettingsRow(title: "深色模式", symbol: "moon.fill", color: .indigo, showsDivider: false) {
-                        TitleColorWell(title: "深色模式", color: $settings.titleColorDark)
-                    }
+                HStack(alignment: .top, spacing: 28) {
+                    StyleColorColumn(title: "浅色", color: lightColor, isCurrent: !systemIsDark)
+                    StyleColorColumn(title: "深色", color: darkColor, isCurrent: systemIsDark)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 6)
+                .padding(.bottom, 12)
             }
 
             SettingsGroup(header: "提示音", footer: "一键清理完成时播放。选一个声音会马上试听。") {
@@ -310,50 +302,150 @@ struct CleanSettingsPage: View {
         settings.soundEnabled && !settings.availableCleanSounds.isEmpty
     }
 
-    private var titleColorFooter: String {
-        if settings.titleColorMode == .followSystem {
-            return "浅色外观用近黑，深色外观用白色，跟着系统换。"
-        }
-        return "系统是浅色时用上面选的颜色，深色时用下面选的颜色。"
-    }
-}
-
-/// 一颗颜色圆点。选中的颜色存成不透明的红绿蓝。
-private struct TitleColorWell: View {
-    let title: String
-    @Binding var color: TitleColor
-
-    var body: some View {
-        ColorPicker(title, selection: selection, supportsOpacity: false)
-            .labelsHidden()
-            .controlSize(.small)
-            .fixedSize()
+    /// 打开时显示正在生效的颜色。在圆盘上一点，就改成自选并马上用上。
+    private var lightColor: Binding<TitleColor> {
+        styleBinding(designed: .lightAppearance, custom: \.titleColorLight)
     }
 
-    private var selection: Binding<Color> {
+    private var darkColor: Binding<TitleColor> {
+        styleBinding(designed: .darkAppearance, custom: \.titleColorDark)
+    }
+
+    private func styleBinding(
+        designed: TitleColor,
+        custom keyPath: ReferenceWritableKeyPath<SettingsModel, TitleColor>
+    ) -> Binding<TitleColor> {
         Binding(
-            get: {
-                Color(red: color.red, green: color.green, blue: color.blue, opacity: 1)
-            },
+            get: { settings.titleColorMode == .followSystem ? designed : settings[keyPath: keyPath] },
             set: { newColor in
-                guard let converted = TitleColor(appKitColor: NSColor(newColor)) else { return }
-                color = converted
+                let current = settings.titleColorMode == .followSystem ? designed : settings[keyPath: keyPath]
+                guard newColor.hex != current.hex else { return }
+                settings[keyPath: keyPath] = newColor
+                settings.titleColorMode = .custom
             }
+        )
+    }
+
+    private var followsSystem: Binding<Bool> {
+        Binding(
+            get: { settings.titleColorMode == .followSystem },
+            set: { settings.titleColorMode = $0 ? .followSystem : .custom }
         )
     }
 }
 
-extension TitleColor {
-    /// 从颜色选择器拿到的颜色换成红绿蓝。换不成就返回 nil，保留原来的颜色。
-    init?(appKitColor: NSColor) {
-        guard let rgb = appKitColor.usingColorSpace(NSColorSpace.sRGB) else { return nil }
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        // 已经换成 sRGB。Mac 上这个方法没有返回值，不能放进 guard。
-        rgb.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        self.init(red: Double(red), green: Double(green), blue: Double(blue))
+/// 一个外观圆盘：直接在盘上选，选中的颜色马上写进设置。
+private struct StyleColorColumn: View {
+    let title: String
+    @Binding var color: TitleColor
+    var isCurrent: Bool
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(isCurrent ? "\(title) · 使用中" : title)
+                .font(.caption)
+                .foregroundStyle(isCurrent ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
+            StyleColorDisc(color: $color)
+        }
+    }
+}
+
+private struct StyleColorDisc: View {
+    @Binding var color: TitleColor
+    private let diameter: CGFloat = 116
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                disc
+                knob
+            }
+            .frame(width: diameter, height: diameter)
+            .contentShape(Circle())
+            .gesture(drag)
+            Slider(value: brightness, in: 0...1)
+                .controlSize(.small)
+                .frame(width: diameter)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("颜色圆盘"))
+    }
+
+    private var disc: some View {
+        Canvas { context, size in
+            let radius = min(size.width, size.height) / 2
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let steps = 120
+            for step in 0..<steps {
+                let start = Double(step) / Double(steps)
+                let end = Double(step + 1) / Double(steps)
+                var path = Path()
+                path.move(to: center)
+                path.addArc(
+                    center: center,
+                    radius: radius,
+                    startAngle: .radians(start * 2 * .pi),
+                    endAngle: .radians(end * 2 * .pi),
+                    clockwise: true
+                )
+                path.closeSubpath()
+                let wedge = TitleColor(hue: (start + end) / 2, saturation: 1, brightness: color.brightness)
+                context.fill(path, with: .color(wedge.swiftUI))
+            }
+            let centerGray = TitleColor(hue: 0, saturation: 0, brightness: color.brightness).swiftUI
+            context.fill(
+                Path(ellipseIn: CGRect(origin: .zero, size: size)),
+                with: .radialGradient(
+                    Gradient(colors: [centerGray, centerGray.opacity(0)]),
+                    center: center,
+                    startRadius: 0,
+                    endRadius: radius
+                )
+            )
+        }
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+    }
+
+    private var knob: some View {
+        Circle()
+            .fill(color.swiftUI)
+            .frame(width: 16, height: 16)
+            .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+            .overlay(Circle().strokeBorder(Color.black.opacity(0.35), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.3), radius: 1, y: 0.5)
+            .position(knobPoint)
+    }
+
+    private var knobPoint: CGPoint {
+        let radius = diameter / 2
+        let angle = color.hue * 2 * .pi
+        let distance = color.saturation * radius
+        return CGPoint(x: radius + CGFloat(cos(angle) * distance), y: radius + CGFloat(sin(angle) * distance))
+    }
+
+    private var drag: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let radius = diameter / 2
+                let dx = Double(value.location.x) - radius
+                let dy = Double(value.location.y) - radius
+                let distance = min(hypot(dx, dy), radius)
+                var hue = atan2(dy, dx) / (2 * .pi)
+                if hue < 0 { hue += 1 }
+                color = TitleColor(hue: hue, saturation: distance / radius, brightness: color.brightness)
+            }
+    }
+
+    private var brightness: Binding<Double> {
+        Binding(
+            get: { color.brightness },
+            set: { newValue in
+                let next = TitleColor(hue: color.hue, saturation: color.saturation, brightness: newValue)
+                guard next.hex != color.hex else { return }
+                color = next
+            }
+        )
     }
 }
 

@@ -3,6 +3,7 @@ import SwiftUI
 import DeskTidyCore
 
 struct IdleAppsView: View {
+    @ObservedObject var settings: SettingsModel
     let apps: [RunningApp]
     let threshold: IdleThreshold
     let icon: (RunningApp) -> NSImage?
@@ -71,7 +72,7 @@ struct IdleAppsView: View {
         }
         .padding(16)
         .frame(width: 300)
-        .tidyWindowGlass(cornerRadius: 18)
+        .modifier(PluginStyle(settings: settings, cornerRadius: 18))
     }
 
     private var quitTitle: String {

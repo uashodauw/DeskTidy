@@ -159,7 +159,7 @@ public final class AppSettings {
         set { defaults.set(newValue, forKey: Self.showsFocusClockKey) }
     }
 
-    /// 面板标题用设计好的两种颜色跟着系统换，还是用用户自己选的。没设置过时跟随系统。
+    /// 打开后的界面用设计好的两套颜色跟着系统换，还是用圆盘上选的。没设置过时跟随系统。
     public var titleColorMode: TitleColorMode {
         get {
             (defaults.object(forKey: Self.titleColorModeKey) as? String).flatMap(TitleColorMode.init(rawValue:))
@@ -168,13 +168,13 @@ public final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: Self.titleColorModeKey) }
     }
 
-    /// 自定义时，浅色外观用的标题颜色。没设置过时是设计好的近黑。
+    /// 自定义时，浅色外观的底色。没设置过时是设计好的浅色。
     public var titleColorLight: TitleColor {
         get { storedTitleColor(Self.titleColorLightKey) ?? .lightAppearance }
         set { defaults.set(newValue.hex, forKey: Self.titleColorLightKey) }
     }
 
-    /// 自定义时，深色外观用的标题颜色。没设置过时是设计好的纯白。
+    /// 自定义时，深色外观的底色。没设置过时是设计好的深色。
     public var titleColorDark: TitleColor {
         get { storedTitleColor(Self.titleColorDarkKey) ?? .darkAppearance }
         set { defaults.set(newValue.hex, forKey: Self.titleColorDarkKey) }

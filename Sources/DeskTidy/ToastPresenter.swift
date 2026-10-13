@@ -9,13 +9,13 @@ final class ToastPresenter {
     /// 连续清理时，旧浮窗的淡出不能把新浮窗也收掉
     private var generation = 0
 
-    func show(_ feedback: CleanupFeedback) {
+    func show(_ feedback: CleanupFeedback, settings: SettingsModel) {
         generation += 1
         let current = generation
 
         let panel = self.panel ?? makePanel()
         self.panel = panel
-        let content = NSHostingView(rootView: ToastView(feedback: feedback))
+        let content = NSHostingView(rootView: ToastView(settings: settings, feedback: feedback))
         let size = content.fittingSize
         panel.contentView = content
         if let screen = NSScreen.main?.visibleFrame {

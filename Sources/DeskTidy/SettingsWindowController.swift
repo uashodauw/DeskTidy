@@ -10,8 +10,8 @@ final class SettingsWindowController: NSObject {
     static let cornerRadius: CGFloat = 22
     /// 窗口四周留给阴影的空间，要比阴影扩散的范围大，否则阴影会被窗口边缘切出硬边
     static let shadowMargin: CGFloat = 72
-    /// 最高的一页（6 个场景）也放得下
-    private static let maxGlassHeight: CGFloat = 620
+    /// 最高的一页（外观圆盘，或 6 个场景）也放得下
+    private static let maxGlassHeight: CGFloat = 780
 
     private let scenes: SceneModel
     private let settings: SettingsModel

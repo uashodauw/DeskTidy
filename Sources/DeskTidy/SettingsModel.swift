@@ -54,7 +54,7 @@ final class SettingsModel: ObservableObject {
         didSet { settings.showsFocusClock = showsFocusClock; onFocusSettingsChange?() }
     }
 
-    /// 面板标题的颜色：跟随系统，或使用下面两种自定义颜色
+    /// 打开后的底色：跟随系统，或使用圆盘上选的两种颜色
     @Published var titleColorMode: TitleColorMode {
         didSet { settings.titleColorMode = titleColorMode }
     }

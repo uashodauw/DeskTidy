@@ -32,26 +32,12 @@ struct PanelView: View {
 
     private let rowHeight: CGFloat = 26
     private let maxListHeight: CGFloat = 156
-    @Environment(\.colorScheme) private var colorScheme
-
-    /// 浅色近黑、深色纯白，或设置里自定义的两种颜色。明确的不透明色，玻璃不会把笔画掺淡。
-    private var titleColor: Color {
-        let chosen = TitleColor.resolved(
-            mode: settings.titleColorMode,
-            isDarkAppearance: colorScheme == .dark,
-            customLight: settings.titleColorLight,
-            customDark: settings.titleColorDark
-        )
-        // 不带色彩空间的这个写法 macOS 13 就有。Color(.sRGB, …) 要 macOS 14，最低系统是 13，会编译失败。
-        return Color(red: chosen.red, green: chosen.green, blue: chosen.blue, opacity: 1)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label(AppInfo.brandName, systemImage: "sparkles")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(titleColor)
                 Spacer()
                 Text("v\(AppInfo.version)")
                     .font(.caption)
@@ -98,7 +84,7 @@ struct PanelView: View {
         }
         .padding(16)
         .frame(width: 260, alignment: .leading)
-        .tidyWindowGlass(cornerRadius: 18)
+        .modifier(PluginStyle(settings: settings, cornerRadius: 18))
     }
 
     private var currentAppRow: some View {

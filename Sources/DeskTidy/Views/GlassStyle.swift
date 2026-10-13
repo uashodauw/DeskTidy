@@ -19,24 +19,35 @@ extension View {
 
     /// 整个窗口的玻璃背景（面板、提示浮窗、"很久没用"窗口）：透过它能看到后面的桌面和其他窗口。
     /// 窗口本身必须是透明的（isOpaque = false、backgroundColor = .clear），否则透不出去。
+    /// tint 是这一套外观的底色，盖在模糊上面，选中的颜色才看得出来。
     @ViewBuilder
-    func tidyWindowGlass(cornerRadius: CGFloat) -> some View {
+    func tidyWindowGlass(cornerRadius: CGFloat, tint: Color? = nil) -> some View {
         // 用普通圆角而不是 .continuous：要和退路方案里模糊层的圆角遮罩完全重合，边框才贴得住
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .circular)
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
-            glassEffect(.regular, in: shape)
+            background {
+                if let tint {
+                    shape.fill(tint.opacity(0.82))
+                }
+            }
+            .glassEffect(TidyGlass.make(tint: tint, interactive: false), in: shape)
         } else {
-            behindWindowGlass(in: shape)
+            behindWindowGlass(in: shape, tint: tint)
         }
         #else
-        behindWindowGlass(in: shape)
+        behindWindowGlass(in: shape, tint: tint)
         #endif
     }
 
-    private func behindWindowGlass(in shape: RoundedRectangle) -> some View {
+    private func behindWindowGlass(in shape: RoundedRectangle, tint: Color?) -> some View {
         background {
             BehindWindowBlur(cornerRadius: shape.cornerSize.width)
+                .overlay {
+                    if let tint {
+                        shape.fill(tint.opacity(0.82))
+                    }
+                }
                 .overlay(shape.strokeBorder(Self.glassEdge, lineWidth: 0.5))
         }
     }

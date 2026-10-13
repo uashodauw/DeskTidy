@@ -6,6 +6,7 @@ import DeskTidyCore
 /// 用的是和面板一样的玻璃、阴影、按钮和动画，看起来是从 DeskTidy 里"长"出来的。
 struct FocusClockView: View {
     @ObservedObject var focus: FocusModel
+    @ObservedObject var settings: SettingsModel
 
     @State private var isHovered = false
     @State private var isBumped = false
@@ -26,7 +27,7 @@ struct FocusClockView: View {
                 compactPill
             }
         }
-        .tidyWindowGlass(cornerRadius: cornerRadius)
+        .modifier(PluginStyle(settings: settings, cornerRadius: cornerRadius))
         .background { PanelShadow(cornerRadius: cornerRadius) }
         .scaleEffect(isBumped ? 1.06 : 1, anchor: .bottomTrailing)
         .onHover { hovering in

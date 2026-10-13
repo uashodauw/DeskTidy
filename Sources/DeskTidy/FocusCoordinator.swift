@@ -20,9 +20,9 @@ final class FocusCoordinator {
     private var currentBreakCovers: Bool?
     private var breaksTaken = 0
 
-    init(focus: FocusModel) {
+    init(focus: FocusModel, settings: SettingsModel) {
         self.focus = focus
-        clock = FocusClockPresenter(rootView: FocusClockView(focus: focus))
+        clock = FocusClockPresenter(rootView: FocusClockView(focus: focus, settings: settings))
         overlay = BreakOverlayPresenter(focus: focus)
         overlay.onSkip = { [weak focus] in focus?.skipBreak() }
     }

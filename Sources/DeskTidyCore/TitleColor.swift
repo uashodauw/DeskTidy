@@ -1,16 +1,16 @@
 import Foundation
 
-/// 面板标题「DeskTidy」的一种颜色，存成不透明的红绿蓝。
-/// 浅色外观和深色外观各有一种：默认浅色近黑、深色纯白，设置里可以换成别的。
+/// 插件打开后的一种底色，存成不透明的红绿蓝。
+/// 浅色外观和深色外观各有一种。默认是设计好的两套；在圆盘上选过之后用自己的。
 public struct TitleColor: Equatable {
     public var red: Double
     public var green: Double
     public var blue: Double
 
-    /// 浅色外观上的标题：近黑，和系统正文一样深，笔画不透明。
-    public static let lightAppearance = TitleColor(hex: "1D1D1F")!
-    /// 深色外观上的标题：纯白。
-    public static let darkAppearance = TitleColor(hex: "FFFFFF")!
+    /// 浅色外观：带一点蓝的白，字用深色才清楚。
+    public static let lightAppearance = TitleColor(hex: "E7EEF6")!
+    /// 深色外观：深蓝灰，字用浅色才清楚。
+    public static let darkAppearance = TitleColor(hex: "1C2430")!
 
     public init(red: Double, green: Double, blue: Double) {
         self.red = Self.unit(red)
@@ -36,6 +36,58 @@ public struct TitleColor: Equatable {
         String(format: "%02X%02X%02X", channel(red), channel(green), channel(blue))
     }
 
+    /// 底色够深时，整块界面改用深色外观（浅色字）。
+    public var isDarkBackground: Bool {
+        relativeLuminance < 0.55
+    }
+
+    /// 色相 0...1、饱和度 0...1、明度 0...1。圆盘用色相和饱和度，滑杆用明度。
+    public var hue: Double {
+        let maxValue = max(red, green, blue)
+        let delta = maxValue - min(red, green, blue)
+        guard delta > 0.00001 else { return 0 }
+        let sector: Double
+        if maxValue == red {
+            sector = (green - blue) / delta + (green < blue ? 6 : 0)
+        } else if maxValue == green {
+            sector = (blue - red) / delta + 2
+        } else {
+            sector = (red - green) / delta + 4
+        }
+        return sector / 6
+    }
+
+    public var saturation: Double {
+        let maxValue = max(red, green, blue)
+        guard maxValue > 0.00001 else { return 0 }
+        return (maxValue - min(red, green, blue)) / maxValue
+    }
+
+    public var brightness: Double {
+        max(red, green, blue)
+    }
+
+    public init(hue: Double, saturation: Double, brightness: Double) {
+        let wrapped = hue - floor(hue)
+        let sat = Self.unit(saturation)
+        let value = Self.unit(brightness)
+        let sector = Int(wrapped * 6) % 6
+        let fraction = wrapped * 6 - Double(Int(wrapped * 6))
+        let p = value * (1 - sat)
+        let q = value * (1 - fraction * sat)
+        let t = value * (1 - (1 - fraction) * sat)
+        let (r, g, b): (Double, Double, Double)
+        switch sector {
+        case 0: (r, g, b) = (value, t, p)
+        case 1: (r, g, b) = (q, value, p)
+        case 2: (r, g, b) = (p, value, t)
+        case 3: (r, g, b) = (p, q, value)
+        case 4: (r, g, b) = (t, p, value)
+        default: (r, g, b) = (value, p, q)
+        }
+        self.init(red: r, green: g, blue: b)
+    }
+
     /// 跟随系统时用设计好的两种颜色；自定义时用用户为当前外观选的那一种。
     public static func resolved(
         mode: TitleColorMode,
@@ -55,12 +107,19 @@ public struct TitleColor: Equatable {
         Int((value * 255).rounded())
     }
 
+    private var relativeLuminance: Double {
+        func linear(_ channel: Double) -> Double {
+            channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+    }
+
     private static func unit(_ value: Double) -> Double {
         min(max(value, 0), 1)
     }
 }
 
-/// 标题颜色怎么定：跟着系统外观，或者用自己选的两种颜色。
+/// 打开后的颜色怎么定：跟着系统外观用设计好的两套，或者用圆盘上选的两套。
 public enum TitleColorMode: String, CaseIterable {
     case followSystem
     case custom

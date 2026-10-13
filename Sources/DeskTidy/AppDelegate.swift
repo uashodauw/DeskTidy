@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let idleApps = GlassWindowPresenter(placement: .topRight)
     private let welcome = GlassWindowPresenter(placement: .center)
     private let focus = FocusModel()
-    private lazy var focusCoordinator = FocusCoordinator(focus: focus)
+    private lazy var focusCoordinator = FocusCoordinator(focus: focus, settings: settings)
     private lazy var settingsWindow = SettingsWindowController(scenes: scenes, settings: settings)
     private lazy var cleanup = CleanupController(runningApps: runningApps, frontmostApp: frontmostApp, scenes: scenes)
 
@@ -117,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showWelcome() {
         settings.welcomeShown = true
         welcome.show(WelcomeView(
+            settings: settings,
             onOpenPanel: { [weak self] in
                 self?.welcome.close()
                 self?.showPanel()
@@ -137,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func performClean() {
         panel?.close()
         let hiddenCount = cleanup.clean()
-        toast.show(CleanupFeedback(hiddenCount: hiddenCount))
+        toast.show(CleanupFeedback(hiddenCount: hiddenCount), settings: settings)
         settings.playCleanSoundIfEnabled()
         showIdleApps()
     }
@@ -159,6 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard settings.shouldShowIdleReminder else { return }
         settings.noteIdleReminderShown()
         idleApps.show(IdleAppsView(
+            settings: settings,
             apps: idle,
             threshold: threshold,
             icon: runningApps.icon(for:),

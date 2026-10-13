@@ -6,6 +6,7 @@ import DeskTidyCore
 /// 第一次打开时的欢迎窗口。DeskTidy 没有窗口、也不在程序坞里，新用户不说就找不到它；
 /// 菜单栏太满时图标还会被系统藏起来，所以要把另外两个入口也告诉用户。
 struct WelcomeView: View {
+    @ObservedObject var settings: SettingsModel
     let onOpenPanel: () -> Void
     let onDismiss: () -> Void
 
@@ -55,7 +56,7 @@ struct WelcomeView: View {
         }
         .padding(20)
         .frame(width: 360)
-        .tidyWindowGlass(cornerRadius: 18)
+        .modifier(PluginStyle(settings: settings, cornerRadius: 18))
     }
 
     private func tip(symbol: String, _ text: String) -> some View {

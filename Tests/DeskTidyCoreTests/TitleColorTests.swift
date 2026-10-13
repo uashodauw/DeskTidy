@@ -16,9 +16,18 @@ final class TitleColorTests: XCTestCase {
         super.tearDown()
     }
 
-    func testDesignedColorsAreNearBlackAndWhite() {
-        XCTAssertEqual(TitleColor.lightAppearance.hex, "1D1D1F")
-        XCTAssertEqual(TitleColor.darkAppearance.hex, "FFFFFF")
+    func testDesignedColorsAreTheLightAndDarkStyles() {
+        XCTAssertEqual(TitleColor.lightAppearance.hex, "E7EEF6")
+        XCTAssertEqual(TitleColor.darkAppearance.hex, "1C2430")
+        XCTAssertFalse(TitleColor.lightAppearance.isDarkBackground)
+        XCTAssertTrue(TitleColor.darkAppearance.isDarkBackground)
+    }
+
+    func testHueRoundTrip() {
+        let color = TitleColor(hue: 0.25, saturation: 0.5, brightness: 0.8)
+        XCTAssertEqual(color.hue, 0.25, accuracy: 0.02)
+        XCTAssertEqual(color.saturation, 0.5, accuracy: 0.02)
+        XCTAssertEqual(color.brightness, 0.8, accuracy: 0.02)
     }
 
     func testHexRoundTripAndHashPrefix() {
